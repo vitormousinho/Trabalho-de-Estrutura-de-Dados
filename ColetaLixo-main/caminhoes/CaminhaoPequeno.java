@@ -3,7 +3,7 @@ package caminhoes;
 public abstract class CaminhaoPequeno {
     protected int capacidade;
     protected int cargaAtual;
-    // Outros atributos comuns
+    // Adicione outros atributos comuns se necessário (id, status, etc.)
 
     // Construtor para definir a capacidade via subclasse
     protected CaminhaoPequeno(int capacidade) {
@@ -12,10 +12,10 @@ public abstract class CaminhaoPequeno {
         }
         this.capacidade = capacidade;
         this.cargaAtual = 0;
-        // Inicializar outros atributos
+        // Inicializar outros atributos comuns
     }
 
-    // Metodo de coleta AINDA abstrato aqui
+    // Método de coleta AINDA abstrato aqui
     public abstract boolean coletar(int quantidade);
 
     // Métodos concretos comuns
@@ -37,4 +37,10 @@ public abstract class CaminhaoPequeno {
         return capacidade;
     }
 
+    // Adicione outros métodos get/set/lógica comuns se precisar
+    @Override
+    public String toString() {
+        // Exemplo de toString útil para depuração
+        return "CaminhaoPequeno[Cap=" + capacidade + ", Carga=" + cargaAtual + "]";
+    }
 }

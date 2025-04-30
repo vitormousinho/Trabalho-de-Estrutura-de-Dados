@@ -1,5 +1,6 @@
 package caminhoes;
 
+// Esta é AGORA a única implementação concreta de CaminhaoPequeno
 public class CaminhaoPequenoPadrao extends CaminhaoPequeno {
 
     // O construtor RECEBE a capacidade desejada
@@ -8,19 +9,20 @@ public class CaminhaoPequenoPadrao extends CaminhaoPequeno {
         super(capacidade);
     }
 
-    // A implementação do metodo abstrato é feita AQUI
+    // A implementação do método abstrato é feita AQUI
     @Override
     public boolean coletar(int quantidade) {
         if (quantidade <= 0) {
-            return false;
+            return false; // Não coleta quantidade negativa ou zero
         }
         if (cargaAtual + quantidade <= capacidade) {
             cargaAtual += quantidade;
             return true;
         }
+        // Se não couber exatamente, não coleta (poderia coletar até encher como alternativa)
         return false;
     }
 
-    // Outros métodos específicos desta classe, se houver, podem ser adicionados.
-    // Por enquanto, ela só implementa o metodo abstrato.
+    // Poderia ter um toString() mais específico se quisesse,
+    // mas por enquanto herdará o toString() de CaminhaoPequeno
 }
