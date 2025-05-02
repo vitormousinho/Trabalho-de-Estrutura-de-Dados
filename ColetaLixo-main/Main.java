@@ -37,23 +37,42 @@ public class Main {
         System.out.println(" > " + listaCaminhoesGrandes.tamanho() + " caminhões grandes criados.");
 
         // --- 4. Criação das Zonas ---
-        // Criar as 5 zonas especificadas no PDF [cite: 4, 19]
         System.out.println("Criando zonas...");
-        listaZonas.adicionar(new ZonaUrbana("Sul"));
-        listaZonas.adicionar(new ZonaUrbana("Norte"));
-        listaZonas.adicionar(new ZonaUrbana("Centro"));
-        listaZonas.adicionar(new ZonaUrbana("Leste"));
-        listaZonas.adicionar(new ZonaUrbana("Sudeste"));
-        // Aqui você precisará configurar os intervalos de geração de lixo de cada zona [cite: 6, 31]
-        // Ex: zonaSul.setIntervaloGeracao(min, max); (teria que adicionar esse método em ZonaUrbana)
-        System.out.println(" > " + listaZonas.tamanho() + " zonas criadas.");
+
+        // Criar as 5 zonas com referências para poder configurá-las
+        ZonaUrbana zonaSul = new ZonaUrbana("Sul");
+        ZonaUrbana zonaNorte = new ZonaUrbana("Norte");
+        ZonaUrbana zonaCentro = new ZonaUrbana("Centro");
+        ZonaUrbana zonaLeste = new ZonaUrbana("Leste");
+        ZonaUrbana zonaSudeste = new ZonaUrbana("Sudeste");
+
+        // Configurar os intervalos de geração para cada zona (em kg)
+        // Valores diferentes para cada zona com base em suas características
+        zonaSul.setIntervaloGeracao(250, 650);      // Zona Sul: área residencial média
+        zonaNorte.setIntervaloGeracao(350, 750);    // Zona Norte: área residencial densa
+        zonaCentro.setIntervaloGeracao(450, 950);   // Zona Centro: área comercial (mais lixo)
+        zonaLeste.setIntervaloGeracao(300, 700);    // Zona Leste: mista residencial/comercial
+        zonaSudeste.setIntervaloGeracao(200, 500);  // Zona Sudeste: área residencial menos densa
+
+        // Adicionar as zonas à lista
+        listaZonas.adicionar(zonaSul);
+        listaZonas.adicionar(zonaNorte);
+        listaZonas.adicionar(zonaCentro);
+        listaZonas.adicionar(zonaLeste);
+        listaZonas.adicionar(zonaSudeste);
+
+        System.out.println(" > " + listaZonas.tamanho() + " zonas criadas com intervalos de geração configurados:");
+        for (int i = 0; i < listaZonas.tamanho(); i++) {
+            ZonaUrbana zona = listaZonas.obter(i);
+            System.out.println("   - " + zona.getNome() + ": " +
+                    zona.getGeracaoMinima() + " a " +
+                    zona.getGeracaoMaxima() + " kg por dia");
+        }
 
         // --- 5. Criação das Estações de Transferência ---
-        // Criar as 2 estações [cite: 8]
         System.out.println("Criando estações de transferência...");
         listaEstacoes.adicionar(new EstacaoPadrao("Estação A"));
         listaEstacoes.adicionar(new EstacaoPadrao("Estação B"));
-        // Configurar tempos máximos de espera aqui, se aplicável [cite: 31]
         System.out.println(" > " + listaEstacoes.tamanho() + " estações criadas.");
 
         // --- 6. Preparar e Iniciar o Simulador ---
@@ -65,15 +84,8 @@ public class Main {
         simulador.setListaCaminhoesGrandes(listaCaminhoesGrandes);
         simulador.setListaZonas(listaZonas);
         simulador.setListaEstacoes(listaEstacoes);
-        // Passar outros parâmetros de configuração para o simulador (tempos de viagem, etc.)
 
         System.out.println("\n=== Configuração Concluída. Iniciando a Simulação... ===");
         simulador.iniciar();
-
-        // A partir daqui, a simulação roda no seu próprio ritmo até ser interrompida
-        // ou até que você implemente uma condição de parada.
-
-        // Você poderia adicionar um loop aqui para interagir com o simulador (pausar, continuar, etc.)
-        // ou apenas deixá-lo rodar por um tempo.
     }
 }
