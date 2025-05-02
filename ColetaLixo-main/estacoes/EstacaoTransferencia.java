@@ -12,6 +12,11 @@ public abstract class EstacaoTransferencia {
         this.tempoMaximoEspera = tempoMaximoEspera;
     }
 
+    // Adicionar este método para resolver o erro
+    public String getNome() {
+        return nome;
+    }
+
     public int getTempoMaximoEspera() {
         return tempoMaximoEspera;
     }

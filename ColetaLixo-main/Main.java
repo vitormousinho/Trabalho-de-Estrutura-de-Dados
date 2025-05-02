@@ -46,15 +46,14 @@ public class Main {
         }
 
         // --- 3. Criação dos Caminhões Grandes Iniciais ---
-        // (Mantido como no código do seu amigo)
         System.out.println("\n--- Configuração da Frota de Caminhões Grandes ---");
-        System.out.println("(Iniciando com 2 caminhões grandes de 20T)"); // Exemplo
-        listaCaminhoesGrandes.adicionar(new CaminhaoGrandePadrao()); // 20 Ton
-        listaCaminhoesGrandes.adicionar(new CaminhaoGrandePadrao()); // 20 Ton
+        int qtdCaminhoesGrandes = perguntarQuantidade(scanner, "Quantos caminhões grandes de 20 Toneladas inicialmente?");
+        for (int i = 0; i < qtdCaminhoesGrandes; i++) {
+            listaCaminhoesGrandes.adicionar(new CaminhaoGrandePadrao()); // 20 Ton
+        }
         System.out.println(" > " + listaCaminhoesGrandes.tamanho() + " caminhões grandes criados.");
 
         // --- 4. Criação e Configuração das Zonas ---
-        // (Mantido como no código do seu amigo, assumindo que ZonaUrbana foi atualizada)
         System.out.println("\n--- Configuração das Zonas ---");
 
         // Criar as 5 zonas com referências para poder configurá-las
@@ -64,8 +63,7 @@ public class Main {
         ZonaUrbana zonaLeste = new ZonaUrbana("Leste");
         ZonaUrbana zonaSudeste = new ZonaUrbana("Sudeste");
 
-        // Configurar os intervalos de geração para cada zona (em kg) - REQUER MUDANÇAS em ZonaUrbana.java
-        // Verifique se os métodos setIntervaloGeracao, getGeracaoMinima, getGeracaoMaxima existem em ZonaUrbana!
+        // Configurar os intervalos de geração para cada zona (em kg)
         try {
             zonaSul.setIntervaloGeracao(250, 650);      // Zona Sul: área residencial média
             zonaNorte.setIntervaloGeracao(350, 750);    // Zona Norte: área residencial densa
@@ -77,7 +75,6 @@ public class Main {
             System.out.println("!!!      Adicione os métodos setIntervaloGeracao, getGeracaoMinima, getGeracaoMaxima em ZonaUrbana.java      !!!");
             // O programa pode continuar, mas a geração de lixo não usará os intervalos corretos.
         }
-
 
         // Adicionar as zonas à lista
         listaZonas.adicionar(zonaSul);
@@ -101,15 +98,29 @@ public class Main {
             System.out.println("   (Não foi possível exibir os intervalos - atualize ZonaUrbana.java com os getters)");
         }
 
-
-        // --- 5. Criação das Estações de Transferência ---
-        // (Mantido como no código do seu amigo)
+        // --- 5. Criação das Estações de Transferência com configuração de tempos de espera ---
         System.out.println("\n--- Configuração das Estações ---");
-        listaEstacoes.adicionar(new EstacaoPadrao("Estação A"));
-        listaEstacoes.adicionar(new EstacaoPadrao("Estação B"));
-        System.out.println(" > " + listaEstacoes.tamanho() + " estações criadas.");
 
-        // --- 6. Preparar e Iniciar o Simulador ---
+        // Perguntar ao usuário os tempos máximos de espera para cada estação
+        int tempoEsperaEstacaoA = perguntarTempo(scanner, "Tempo limite antes de adicionar um novo caminhão grande na Estação A (minutos):");
+        int tempoEsperaEstacaoB = perguntarTempo(scanner, "Tempo limite antes de adicionar um novo caminhão grande na Estação B (minutos):");
+
+        // Criar estações com os tempos configurados
+        listaEstacoes.adicionar(new EstacaoPadrao("Estação A", tempoEsperaEstacaoA));
+        listaEstacoes.adicionar(new EstacaoPadrao("Estação B", tempoEsperaEstacaoB));
+
+        System.out.println(" > " + listaEstacoes.tamanho() + " estações criadas.");
+        System.out.println(" > Tempos de espera configurados:");
+        for (int i = 0; i < listaEstacoes.tamanho(); i++) {
+            EstacaoTransferencia estacao = listaEstacoes.obter(i);
+            System.out.println("   - " + estacao.getNome() + ": " + estacao.getTempoMaximoEspera() + " minutos");
+        }
+
+        // --- 6. Configurar tempo de espera dos caminhões grandes ---
+        System.out.println("\n--- Configuração de Tolerância dos Caminhões Grandes ---");
+        int toleranciaCaminhoesGrandes = perguntarTempo(scanner, "Tempo de tolerância de espera (em minutos) para caminhões grandes:");
+
+        // --- 7. Preparar e Iniciar o Simulador ---
         System.out.println("\n--- Configurando o Simulador ---");
         Simulador simulador = new Simulador();
 
@@ -118,7 +129,9 @@ public class Main {
         simulador.setListaCaminhoesGrandes(listaCaminhoesGrandes);
         simulador.setListaZonas(listaZonas);
         simulador.setListaEstacoes(listaEstacoes);
-        // Passar outros parâmetros para o simulador aqui (tempos de viagem, etc.)
+
+        // Configurar o tempo de tolerância dos caminhões grandes
+        simulador.setToleranciaCaminhoesGrandes(toleranciaCaminhoesGrandes);
 
         System.out.println("\n=== Configuração Concluída. Iniciando a Simulação... ===");
         simulador.iniciar();
@@ -129,9 +142,7 @@ public class Main {
         System.out.println("(Thread principal 'main' terminando. Simulação continua em background.)");
     }
 
-
     // --- Método Auxiliar para perguntar quantidade ao usuário ---
-    // (Mantido da versão anterior)
     private static int perguntarQuantidade(Scanner scanner, String mensagem) {
         int quantidade = -1;
         while (quantidade < 0) {
@@ -150,8 +161,26 @@ public class Main {
         return quantidade;
     }
 
+    // --- Método Auxiliar para perguntar tempo de espera ---
+    private static int perguntarTempo(Scanner scanner, String mensagem) {
+        int tempo = -1;
+        while (tempo < 1) { // Exige pelo menos 1 minuto
+            System.out.print(mensagem + " ");
+            try {
+                tempo = scanner.nextInt();
+                if (tempo < 1) {
+                    System.out.println("Erro: O tempo deve ser pelo menos 1 minuto.");
+                }
+            } catch (InputMismatchException e) {
+                System.out.println("Erro: Entrada inválida. Por favor, insira um número inteiro.");
+                scanner.next(); // Consome a entrada inválida
+                tempo = -1;
+            }
+        }
+        return tempo;
+    }
+
     // --- Método Auxiliar para adicionar caminhões à lista ---
-    // (Mantido da versão anterior)
     private static void adicionarCaminhoes(Lista<CaminhaoPequeno> lista, int quantidade, int capacidade) {
         for (int i = 0; i < quantidade; i++) {
             lista.adicionar(new CaminhaoPequenoPadrao(capacidade));
