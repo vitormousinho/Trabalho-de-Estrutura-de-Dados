@@ -1,18 +1,45 @@
 package caminhoes;
 
+import java.util.Random; // Para gerar a placa aleatória
+
 public abstract class CaminhaoPequeno {
     protected int capacidade;
     protected int cargaAtual;
-    // Adicione outros atributos comuns se necessário (id, status, etc.)
+    protected String placa; // Novo atributo para a placa
 
-    // Construtor para definir a capacidade via subclasse
+    // --- Novos atributos para estado e viagem (a serem usados na lógica do Simulador) ---
+    // protected StatusCaminhao status; // Ex: OCIOSO, COLETANDO, VIAJANDO_ESTACAO, NA_FILA, etc. (Enum a ser criado)
+    // protected int tempoRestanteViagem;
+    // protected Zona zonaAtual; // Onde o caminhão está ou para onde vai
+    // protected EstacaoTransferencia estacaoDestino;
+    // protected int viagensRealizadasHoje;
+    // ------------------------------------------------------------------------------------
+
+    private static final Random random = new Random(); // Gerador de números aleatórios (static para ser compartilhado)
+
+    // Construtor agora também gera uma placa
     protected CaminhaoPequeno(int capacidade) {
         if (capacidade <= 0) {
             throw new IllegalArgumentException("Capacidade deve ser positiva.");
         }
         this.capacidade = capacidade;
         this.cargaAtual = 0;
-        // Inicializar outros atributos comuns
+        this.placa = gerarPlacaAleatoria(); // Gera e atribui a placa
+        // Inicializar outros atributos aqui (status = StatusCaminhao.OCIOSO, tempoRestanteViagem = 0, etc.)
+    }
+
+    // Método auxiliar estático para gerar uma placa aleatória simples (LLLNNN)
+    private static String gerarPlacaAleatoria() {
+        // Gera 3 letras maiúsculas aleatórias (A-Z)
+        char l1 = (char) ('A' + random.nextInt(26));
+        char l2 = (char) ('A' + random.nextInt(26));
+        char l3 = (char) ('A' + random.nextInt(26));
+        // Gera 3 números aleatórios (0-9)
+        int n1 = random.nextInt(10);
+        int n2 = random.nextInt(10);
+        int n3 = random.nextInt(10);
+
+        return String.format("%c%c%c%d%d%d", l1, l2, l3, n1, n2, n3);
     }
 
     // Método de coleta AINDA abstrato aqui
@@ -37,10 +64,16 @@ public abstract class CaminhaoPequeno {
         return capacidade;
     }
 
+    public String getPlaca() {
+        return placa;
+    }
+
     // Adicione outros métodos get/set/lógica comuns se precisar
+
     @Override
     public String toString() {
-        // Exemplo de toString útil para depuração
-        return "CaminhaoPequeno[Cap=" + capacidade + ", Carga=" + cargaAtual + "]";
+        // Atualizado para incluir a placa
+        return String.format("CaminhaoPequeno[Placa=%s, Cap=%dkg, Carga=%dkg]",
+                placa, capacidade, cargaAtual);
     }
 }

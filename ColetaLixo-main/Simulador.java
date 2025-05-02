@@ -1,8 +1,9 @@
 import java.io.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Random;
 
-// Importe as classes necessárias, incluindo sua Lista e as classes do modelo
+// Importe as classes necessárias
 import Estruturas.Lista;
 import caminhoes.CaminhaoPequeno;
 import caminhoes.CaminhaoGrande;
@@ -13,63 +14,61 @@ import estacoes.EstacaoTransferencia;
 public class Simulador implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private transient Timer timer; // transient para não tentar salvar o Timer
-    private int tempoSimulado = 0;
+    private transient Timer timer;
+    private int tempoSimulado = 0; // Em minutos simulados
     private boolean pausado = false;
+    private transient Random random = new Random();
 
-    // --- NOVOS ATRIBUTOS para guardar os elementos da simulação ---
+    // --- Atributos para guardar os elementos ---
     private Lista<CaminhaoPequeno> listaCaminhoesPequenos;
     private Lista<CaminhaoGrande> listaCaminhoesGrandes;
     private Lista<ZonaUrbana> listaZonas;
     private Lista<EstacaoTransferencia> listaEstacoes;
-    // Adicione aqui outros atributos que o simulador precise gerenciar (parâmetros, estatísticas, etc.)
 
-    // Construtor padrão (pode adicionar inicializações se precisar)
+    // --- PARÂMETROS DE CONFIGURAÇÃO (Horário de Pico e Tempos de Viagem) ---
+    private int picoManhaInicio = 7 * 60; // 420
+    private int picoManhaFim = 9 * 60 - 1; // 539
+    private int picoTardeInicio = 17 * 60; // 1020
+    private int picoTardeFim = 19 * 60 - 1; // 1139
+
+    private int minViagemForaPico = 15;
+    private int maxViagemForaPico = 45;
+    private int minViagemPico = 30;
+    private int maxViagemPico = 90;
+
+    // Construtor
     public Simulador() {
-        // Inicializa as listas para evitar NullPointerException
-        // No Java, é boa prática inicializar coleções no construtor ou na declaração
         this.listaCaminhoesPequenos = new Lista<>();
         this.listaCaminhoesGrandes = new Lista<>();
         this.listaZonas = new Lista<>();
         this.listaEstacoes = new Lista<>();
     }
 
-    // --- NOVOS MÉTODOS para configurar o simulador com os elementos ---
-    public void setListaCaminhoesPequenos(Lista<CaminhaoPequeno> lista) {
-        this.listaCaminhoesPequenos = lista;
-    }
+    // --- Métodos Setters para as listas ---
+    public void setListaCaminhoesPequenos(Lista<CaminhaoPequeno> lista) { this.listaCaminhoesPequenos = lista; }
+    public void setListaCaminhoesGrandes(Lista<CaminhaoGrande> lista) { this.listaCaminhoesGrandes = lista; }
+    public void setListaZonas(Lista<ZonaUrbana> lista) { this.listaZonas = lista; }
+    public void setListaEstacoes(Lista<EstacaoTransferencia> lista) { this.listaEstacoes = lista; }
+    // --- Adicionar Setters para os parâmetros de tempo se forem configuráveis ---
 
-    public void setListaCaminhoesGrandes(Lista<CaminhaoGrande> lista) {
-        this.listaCaminhoesGrandes = lista;
-    }
-
-    public void setListaZonas(Lista<ZonaUrbana> lista) {
-        this.listaZonas = lista;
-    }
-
-    public void setListaEstacoes(Lista<EstacaoTransferencia> lista) {
-        this.listaEstacoes = lista;
-    }
-    // --- Fim dos novos métodos ---
-
-
+    // --- MÉTODOS DE CONTROLE ---
     public void iniciar() {
         if (timer != null) {
             System.out.println("Simulação já estava iniciada. Para reiniciar, encerre primeiro.");
             return;
         }
         System.out.println("Simulação iniciada...");
-        pausado = false; // Garante que não comece pausado
-        tempoSimulado = 0; // Reseta o tempo ao iniciar
+        pausado = false;
+        tempoSimulado = 0;
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             public void run() {
                 if (!pausado) {
-                    tempoSimulado++;
+                    tempoSimulado = (tempoSimulado + 1) % (24 * 60); // Avança 1 minuto e faz o ciclo diário
                     atualizarSimulacao();
                 }
             }
-        }, 0, 1000); // Atualiza a cada 1000 ms (1 segundo real)
+        }, 0, 50); // Atualiza a cada 50ms reais
     }
 
     public void pausar() {
@@ -90,65 +89,78 @@ public class Simulador implements Serializable {
         System.out.println("Simulação encerrada.");
         if (timer != null) {
             timer.cancel();
-            timer = null; // Importante para poder reiniciar depois
+            timer = null;
         }
     }
 
-    // Método para salvar o estado (precisa ajustar o que salvar)
+    // --- Método para salvar o estado ---
     public void gravar(String caminho) throws IOException {
-        // Atenção: Salvar o estado completo com listas customizadas pode exigir
-        // que todas as classes envolvidas (Lista, Caminhao, Zona, Estacao)
-        // também implementem Serializable.
-        // O Timer não pode ser salvo (por isso é transient).
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(caminho))) {
-            oos.writeObject(this); // Salva o objeto Simulador (e tudo que ele contém)
+            oos.writeObject(this);
             System.out.println("Simulação salva em " + caminho);
         }
     }
 
-    // Método para carregar o estado
+    // --- Método para carregar o estado (CORRIGIDO) ---
     public static Simulador carregar(String caminho) throws IOException, ClassNotFoundException {
+        Simulador sim = null; // 1. Declara a variável ANTES do try
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(caminho))) {
-            Simulador sim = (Simulador) ois.readObject();
-            // O timer não foi salvo, então precisa ser recriado se quiser continuar
-            // Mas NÃO iniciamos automaticamente ao carregar, o usuário deve chamar continuar() ou iniciar()
-            sim.timer = null;
-            sim.pausado = true; // Carrega em estado pausado por segurança
+            sim = (Simulador) ois.readObject(); // 2. Atribui o valor DENTRO do try
+            // Configurações pós-carregamento
+            sim.timer = null; // Timer não é salvo, precisa ser recriado
+            sim.pausado = true; // Carrega pausado
             System.out.println("Simulação carregada de " + caminho + ". Está pausada.");
-            return sim;
         }
+        // 3. Retorna o valor DEPOIS do try
+        // Se ocorreu uma exceção no try, ela será lançada para fora do método
+        // antes de chegar aqui, então o compilador sabe que se chegar aqui, 'sim' foi inicializado.
+        if (sim == null) {
+            // Segurança adicional: se algo muito estranho acontecer e sim continuar null sem exceção
+            throw new IOException("Falha ao carregar o objeto Simulador, objeto nulo após deserialização.");
+        }
+        return sim; // <<<< O return agora está fora e garantido (se não houver exceção)
     }
 
-    // --- LÓGICA PRINCIPAL DA SIMULAÇÃO (Ainda precisa ser implementada!) ---
+
+    // --- MÉTODO AUXILIAR para verificar horário de pico ---
+    private boolean isHorarioDePico(int tempoAtualMinutos) {
+        boolean manha = (tempoAtualMinutos >= picoManhaInicio && tempoAtualMinutos <= picoManhaFim);
+        boolean tarde = (tempoAtualMinutos >= picoTardeInicio && tempoAtualMinutos <= picoTardeFim);
+        return manha || tarde;
+    }
+
+    // --- MÉTODO AUXILIAR para calcular tempo de viagem ---
+    private int calcularTempoViagemPequeno() {
+        int min, max;
+        if (isHorarioDePico(this.tempoSimulado)) {
+            min = this.minViagemPico;
+            max = this.maxViagemPico;
+        } else {
+            min = this.minViagemForaPico;
+            max = this.maxViagemForaPico;
+        }
+        if (min >= max) return min;
+        return random.nextInt(max - min + 1) + min;
+    }
+
+
+    // --- LÓGICA PRINCIPAL DA SIMULAÇÃO ---
     private void atualizarSimulacao() {
-        System.out.println("Tempo simulado: " + tempoSimulado + " minutos"); // Ou outra unidade de tempo
+        int hora = tempoSimulado / 60;
+        int minuto = tempoSimulado % 60;
+        System.out.printf("Tempo simulado: %02d:%02d %s%n", hora, minuto, isHorarioDePico(tempoSimulado) ? "(PICO)" : "");
 
-        // Aqui virá a lógica principal:
-        // 1. Gerar lixo nas zonas (iterar sobre listaZonas)
-        //    - Ex: for (int i = 0; i < listaZonas.tamanho(); i++) { listaZonas.obter(i).gerarLixo(); }
-        // 2. Atualizar estado dos caminhões pequenos (iterar sobre listaCaminhoesPequenos)
-        //    - Se ocioso, mandar para uma zona coletar.
-        //    - Se viajando, decrementar tempo de viagem.
-        //    - Se coletando, tentar coletar lixo da zona atual. Verificar se encheu.
-        //    - Se cheio, definir rota para uma estação de transferência.
-        // 3. Atualizar estado dos caminhões grandes (iterar sobre listaCaminhoesGrandes)
-        //    - Se na estação carregando, verificar tempo de espera / se encheu.
-        //    - Se cheio ou tempo excedido, mandar para o aterro.
-        //    - Se viajando, decrementar tempo de viagem.
-        // 4. Atualizar estado das estações (iterar sobre listaEstacoes)
-        //    - Processar fila de caminhões pequenos (se houver caminhão grande disponível).
-        //    - Verificar necessidade de novos caminhões grandes.
-        // 5. Coletar estatísticas.
+        // Implementar a lógica principal aqui...
 
-        // Exemplo simples de acesso às listas (para você ver que funciona):
-        if (tempoSimulado % 10 == 0) { // A cada 10 passos de tempo
-            System.out.println(" > Status: " + listaCaminhoesPequenos.tamanho() + " caminhões pequenos, "
-                    + listaCaminhoesGrandes.tamanho() + " caminhões grandes, "
-                    + listaZonas.tamanho() + " zonas, "
-                    + listaEstacoes.tamanho() + " estações.");
-            // Poderia imprimir o estado do primeiro caminhão, por exemplo:
+
+        // Exemplo de impressão a cada 60 minutos simulados
+        if (tempoSimulado % 60 == 0 && tempoSimulado != 0) { // Evita imprimir no tempo 0
+            System.out.println(" > Status: " + listaCaminhoesPequenos.tamanho() + " CP, "
+                    + listaCaminhoesGrandes.tamanho() + " CG, "
+                    + listaZonas.tamanho() + " Z, "
+                    + listaEstacoes.tamanho() + " E.");
             if (!listaCaminhoesPequenos.estaVazia()) {
-                System.out.println(" > Estado do primeiro caminhão pequeno: " + listaCaminhoesPequenos.obter(0));
+                System.out.println(" > Primeiro CP: " + listaCaminhoesPequenos.obter(0));
             }
         }
     }
