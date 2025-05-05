@@ -4,21 +4,35 @@ import java.util.Random;
 import zonas.ZonaUrbana;
 import estacoes.EstacaoTransferencia;
 
+/**
+ * Classe abstrata que representa um caminhão de coleta de pequeno porte.
+ * Possui capacidade variável, placa, status e controle de viagens.
+ */
 public abstract class CaminhaoPequeno {
+
+    // Constante para o limite de viagens diárias padrão
+    public static final int LIMITE_VIAGENS_DIARIAS_PADRAO = 10;
+
+    // Atributos protegidos
     protected int capacidade;
     protected int cargaAtual;
     protected String placa;
-
-    // Novos atributos para controle de estado
     protected StatusCaminhao status;
     protected int tempoRestanteViagem;
-    protected ZonaUrbana zonaAtual;
-    protected EstacaoTransferencia estacaoDestino;
+    protected ZonaUrbana zonaAtual; // Zona onde está coletando ou para onde está retornando
+    protected EstacaoTransferencia estacaoDestino; // Estação para onde está viajando
     protected int viagensRealizadasHoje;
     protected int limiteViagensDiarias;
 
-    private static final Random random = new Random();
+    private static final Random random = new Random(); // Gerador de números aleatórios para placa
 
+    /**
+     * Construtor para CaminhaoPequeno.
+     * Inicializa a capacidade, carga, placa e status padrão.
+     *
+     * @param capacidade A capacidade máxima de carga do caminhão em kg (deve ser > 0).
+     * @throws IllegalArgumentException se a capacidade não for positiva.
+     */
     protected CaminhaoPequeno(int capacidade) {
         if (capacidade <= 0) {
             throw new IllegalArgumentException("Capacidade deve ser positiva.");
@@ -33,9 +47,14 @@ public abstract class CaminhaoPequeno {
         this.zonaAtual = null;
         this.estacaoDestino = null;
         this.viagensRealizadasHoje = 0;
-        this.limiteViagensDiarias = 10; // Valor padrão, pode ser configurado
+        // Antes: this.limiteViagensDiarias = 10;
+        this.limiteViagensDiarias = LIMITE_VIAGENS_DIARIAS_PADRAO; // Usa a constante
     }
 
+    /**
+     * Gera uma placa aleatória no formato LLLNNN.
+     * @return Uma string representando a placa gerada.
+     */
     private static String gerarPlacaAleatoria() {
         char l1 = (char) ('A' + random.nextInt(26));
         char l2 = (char) ('A' + random.nextInt(26));
@@ -47,69 +66,89 @@ public abstract class CaminhaoPequeno {
         return String.format("%c%c%c%d%d%d", l1, l2, l3, n1, n2, n3);
     }
 
-    // Método de coleta AINDA abstrato aqui
-    public abstract boolean coletar(int quantidade);
+    /**
+     * Método abstrato para coletar lixo. A implementação define como a coleta ocorre.
+     * @param quantidade A quantidade de lixo a tentar coletar.
+     * @return A quantidade de lixo efetivamente coletada.
+     */
+    public abstract int coletar(int quantidade);
 
-    // Métodos concretos comuns
+    /**
+     * Verifica se o caminhão atingiu ou excedeu sua capacidade máxima.
+     * @return true se estiver cheio, false caso contrário.
+     */
     public boolean estaCheio() {
         return cargaAtual >= capacidade;
     }
 
+    /**
+     * Esvazia a carga do caminhão (simula o descarregamento).
+     * @return A quantidade de carga que foi descarregada.
+     */
     public int descarregar() {
-        int carga = cargaAtual;
+        int cargaDescarregada = cargaAtual;
         cargaAtual = 0;
-        return carga;
+        // Poderia mudar o status aqui se necessário, mas geralmente é feito pelo chamador (Estacao ou Simulador)
+        return cargaDescarregada;
     }
 
-    // Novos métodos para gestão do estado
-
     /**
-     * Registra uma viagem realizada e verifica se o limite diário foi atingido
-     * @return true se ainda pode realizar viagens, false se atingiu o limite
+     * Registra que uma viagem foi realizada e atualiza o status se o limite diário for atingido.
+     * @return true se o caminhão ainda pode realizar mais viagens hoje, false se atingiu o limite.
      */
     public boolean registrarViagem() {
         viagensRealizadasHoje++;
         if (viagensRealizadasHoje >= limiteViagensDiarias) {
             status = StatusCaminhao.INATIVO_LIMITE_VIAGENS;
+            System.out.println("Caminhão " + placa + " atingiu o limite de " + limiteViagensDiarias + " viagens.");
             return false;
         }
         return true;
     }
 
     /**
-     * Reinicia o contador de viagens diárias
+     * Reinicia o contador de viagens diárias (geralmente chamado no início de um novo dia simulado).
+     * Se o caminhão estava inativo devido ao limite de viagens, ele volta ao estado OCIOSO.
      */
     public void reiniciarViagensDiarias() {
         viagensRealizadasHoje = 0;
         if (status == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
-            status = StatusCaminhao.OCIOSO;
+            status = StatusCaminhao.OCIOSO; // Volta a ficar disponível
+            System.out.println("Caminhão " + placa + " reiniciou viagens diárias e está OCIOSO.");
         }
     }
 
     /**
-     * Define o destino do caminhão (zona ou estação)
+     * Define o destino do caminhão como sendo uma Zona Urbana (para coleta ou retorno).
+     * @param zona A ZonaUrbana de destino.
      */
     public void definirDestino(ZonaUrbana zona) {
         this.zonaAtual = zona;
-        this.estacaoDestino = null;
-        this.status = StatusCaminhao.VIAJANDO_ESTACAO;
+        this.estacaoDestino = null; // Garante que não há estação destino
+        // O status (COLETANDO, RETORNANDO_ZONA) deve ser definido pelo chamador
     }
 
+    /**
+     * Define o destino do caminhão como sendo uma Estação de Transferência.
+     * @param estacao A EstacaoTransferencia de destino.
+     */
     public void definirDestino(EstacaoTransferencia estacao) {
         this.estacaoDestino = estacao;
-        this.status = StatusCaminhao.VIAJANDO_ESTACAO;
+        this.zonaAtual = null; // Garante que não há zona atual (ele está em viagem para estação)
+        this.status = StatusCaminhao.VIAJANDO_ESTACAO; // Define o status apropriado
     }
 
     /**
-     * Define o tempo de viagem restante
+     * Define o tempo restante para a viagem atual.
+     * @param tempoViagem O tempo em minutos.
      */
     public void definirTempoViagem(int tempoViagem) {
-        this.tempoRestanteViagem = tempoViagem;
+        this.tempoRestanteViagem = Math.max(0, tempoViagem); // Garante tempo não negativo
     }
 
     /**
-     * Processa o tempo de viagem, decrementando o contador
-     * @return true se a viagem terminou, false se ainda está em andamento
+     * Processa um passo de tempo da viagem, decrementando o tempo restante.
+     * @return true se a viagem terminou (tempo <= 0), false caso contrário.
      */
     public boolean processarViagem() {
         if (tempoRestanteViagem > 0) {
@@ -118,7 +157,8 @@ public abstract class CaminhaoPequeno {
         return tempoRestanteViagem <= 0;
     }
 
-    // Getters e Setters
+    // --- Getters e Setters ---
+
     public int getCargaAtual() {
         return cargaAtual;
     }
@@ -136,6 +176,7 @@ public abstract class CaminhaoPequeno {
     }
 
     public void setStatus(StatusCaminhao status) {
+        // Poderia adicionar validações de transição de status se necessário
         this.status = status;
     }
 
@@ -155,6 +196,11 @@ public abstract class CaminhaoPequeno {
         return limiteViagensDiarias;
     }
 
+    /**
+     * Define um novo limite de viagens diárias para o caminhão.
+     * @param limite O novo limite (deve ser > 0).
+     * @throws IllegalArgumentException se o limite não for positivo.
+     */
     public void setLimiteViagensDiarias(int limite) {
         if (limite <= 0) {
             throw new IllegalArgumentException("Limite de viagens deve ser positivo.");
@@ -164,7 +210,16 @@ public abstract class CaminhaoPequeno {
 
     @Override
     public String toString() {
-        return String.format("CaminhaoPequeno[Placa=%s, Cap=%dkg, Carga=%dkg, Status=%s]",
-                placa, capacidade, cargaAtual, status);
+        String destinoStr = "";
+        if (status == StatusCaminhao.VIAJANDO_ESTACAO && estacaoDestino != null) {
+            destinoStr = " -> " + estacaoDestino.getNome();
+        } else if ((status == StatusCaminhao.COLETANDO || status == StatusCaminhao.RETORNANDO_ZONA) && zonaAtual != null) {
+            destinoStr = " @ " + zonaAtual.getNome();
+        } else if (status == StatusCaminhao.NA_FILA && estacaoDestino != null){
+            destinoStr = " [Fila " + estacaoDestino.getNome() + "]";
+        }
+
+        return String.format("CP[%s, Cap=%dkg, Carga=%dkg, St=%s%s, V=%d/%d]",
+                placa, capacidade, cargaAtual, status, destinoStr, viagensRealizadasHoje, limiteViagensDiarias);
     }
 }

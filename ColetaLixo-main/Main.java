@@ -1,4 +1,3 @@
-// Importa todas as classes que vamos usar na configuração
 import Estruturas.Lista;
 import caminhoes.CaminhaoPequeno;
 import caminhoes.CaminhaoPequenoPadrao;
@@ -8,20 +7,40 @@ import zonas.ZonaUrbana;
 import estacoes.EstacaoTransferencia;
 import estacoes.EstacaoPadrao;
 
-// --- Imports para a configuração interativa ---
 import java.util.Scanner;
 import java.util.InputMismatchException;
 import javax.swing.SwingUtilities;
 
 public class Main {
+
+    // --- Constantes ---
+    // Capacidades Caminhões Pequenos (kg)
+    private static final int CAPACIDADE_2T = 2000;
+    private static final int CAPACIDADE_4T = 4000;
+    private static final int CAPACIDADE_8T = 8000;
+    private static final int CAPACIDADE_10T = 10000;
+
+    // Nomes das Zonas
+    private static final String ZONA_SUL = "Sul";
+    private static final String ZONA_NORTE = "Norte";
+    private static final String ZONA_CENTRO = "Centro";
+    private static final String ZONA_LESTE = "Leste";
+    private static final String ZONA_SUDESTE = "Sudeste";
+
+    // Nomes das Estações
+    private static final String ESTACAO_A = "Estação A";
+    private static final String ESTACAO_B = "Estação B";
+
+
     public static void main(String[] args) {
 
-        System.out.println("=== Configurando o Simulador de Coleta de Lixo de Teresina ===");
+        System.out.println("============================================================");
+        System.out.println("=== Simulador de Coleta de Lixo de Teresina (v2.0) ===");
+        System.out.println("============================================================");
 
-        // --- Usa o Scanner para interação ---
         Scanner scanner = new Scanner(System.in);
 
-        // --- 1. Criação das Listas para guardar os elementos ---
+        // --- 1. Criação das Listas ---
         Lista<CaminhaoPequeno> listaCaminhoesPequenos = new Lista<>();
         Lista<CaminhaoGrande> listaCaminhoesGrandes = new Lista<>();
         Lista<ZonaUrbana> listaZonas = new Lista<>();
@@ -29,126 +48,107 @@ public class Main {
 
         // --- 2. Criação Interativa dos Caminhões Pequenos ---
         System.out.println("\n--- Configuração da Frota de Caminhões Pequenos ---");
-        int qtd2T = perguntarQuantidade(scanner, "Quantos caminhões de 2 Toneladas?");
-        int qtd4T = perguntarQuantidade(scanner, "Quantos caminhões de 4 Toneladas?");
-        int qtd8T = perguntarQuantidade(scanner, "Quantos caminhões de 8 Toneladas?");
-        int qtd10T = perguntarQuantidade(scanner, "Quantos caminhões de 10 Toneladas?");
+        int qtd2T = perguntarQuantidade(scanner, "Quantos caminhões de " + (CAPACIDADE_2T/1000) + " Toneladas?");
+        int qtd4T = perguntarQuantidade(scanner, "Quantos caminhões de " + (CAPACIDADE_4T/1000) + " Toneladas?");
+        int qtd8T = perguntarQuantidade(scanner, "Quantos caminhões de " + (CAPACIDADE_8T/1000) + " Toneladas?");
+        int qtd10T = perguntarQuantidade(scanner, "Quantos caminhões de " + (CAPACIDADE_10T/1000) + " Toneladas?");
 
-        // Adiciona os caminhões à lista com base nas respostas
-        adicionarCaminhoes(listaCaminhoesPequenos, qtd2T, 2000);
-        adicionarCaminhoes(listaCaminhoesPequenos, qtd4T, 4000);
-        adicionarCaminhoes(listaCaminhoesPequenos, qtd8T, 8000);
-        adicionarCaminhoes(listaCaminhoesPequenos, qtd10T, 10000);
+        adicionarCaminhoes(listaCaminhoesPequenos, qtd2T, CAPACIDADE_2T);
+        adicionarCaminhoes(listaCaminhoesPequenos, qtd4T, CAPACIDADE_4T);
+        adicionarCaminhoes(listaCaminhoesPequenos, qtd8T, CAPACIDADE_8T);
+        adicionarCaminhoes(listaCaminhoesPequenos, qtd10T, CAPACIDADE_10T);
 
         System.out.println(" > Total de " + listaCaminhoesPequenos.tamanho() + " caminhões pequenos configurados.");
-        if (!listaCaminhoesPequenos.estaVazia()) {
-            System.out.println(" > Frota: " + listaCaminhoesPequenos); // Mostra a frota criada
-        }
+        // Opcional: Mostrar a frota criada (pode ser longo)
+        // if (!listaCaminhoesPequenos.estaVazia()) {
+        //     System.out.println(" > Frota Pequena: " + listaCaminhoesPequenos);
+        // }
 
         // --- 3. Criação dos Caminhões Grandes Iniciais ---
         System.out.println("\n--- Configuração da Frota de Caminhões Grandes ---");
-        int qtdCaminhoesGrandes = perguntarQuantidade(scanner, "Quantos caminhões grandes de 20 Toneladas inicialmente?");
+        int qtdCaminhoesGrandes = perguntarQuantidade(scanner, "Quantos caminhões grandes de " + (CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000) + " Toneladas inicialmente?");
+        // Tolerância será perguntada depois, criamos com a padrão por enquanto
         for (int i = 0; i < qtdCaminhoesGrandes; i++) {
-            listaCaminhoesGrandes.adicionar(new CaminhaoGrandePadrao()); // 20 Ton
+            listaCaminhoesGrandes.adicionar(new CaminhaoGrandePadrao());
         }
         System.out.println(" > " + listaCaminhoesGrandes.tamanho() + " caminhões grandes criados.");
 
         // --- 4. Criação e Configuração das Zonas ---
         System.out.println("\n--- Configuração das Zonas ---");
+        System.out.println("Defina os intervalos de geração diária de lixo (em kg).");
 
-        // Criar as 5 zonas com referências para poder configurá-las
-        ZonaUrbana zonaSul = new ZonaUrbana("Sul");
-        ZonaUrbana zonaNorte = new ZonaUrbana("Norte");
-        ZonaUrbana zonaCentro = new ZonaUrbana("Centro");
-        ZonaUrbana zonaLeste = new ZonaUrbana("Leste");
-        ZonaUrbana zonaSudeste = new ZonaUrbana("Sudeste");
+        // Criar zonas
+        ZonaUrbana zonaSul = criarZonaComIntervalo(scanner, ZONA_SUL);
+        ZonaUrbana zonaNorte = criarZonaComIntervalo(scanner, ZONA_NORTE);
+        ZonaUrbana zonaCentro = criarZonaComIntervalo(scanner, ZONA_CENTRO);
+        ZonaUrbana zonaLeste = criarZonaComIntervalo(scanner, ZONA_LESTE);
+        ZonaUrbana zonaSudeste = criarZonaComIntervalo(scanner, ZONA_SUDESTE);
 
-        // Configurar os intervalos de geração para cada zona (em kg)
-        try {
-            zonaSul.setIntervaloGeracao(250, 650);      // Zona Sul: área residencial média
-            zonaNorte.setIntervaloGeracao(350, 750);    // Zona Norte: área residencial densa
-            zonaCentro.setIntervaloGeracao(450, 950);   // Zona Centro: área comercial (mais lixo)
-            zonaLeste.setIntervaloGeracao(300, 700);    // Zona Leste: mista residencial/comercial
-            zonaSudeste.setIntervaloGeracao(200, 500);  // Zona Sudeste: área residencial menos densa
-        } catch (Exception e) {
-            System.out.println("\n!!! ERRO: " + e.getMessage() + " !!!");
-            System.out.println("!!!      Verifique a implementação da classe ZonaUrbana      !!!");
-        }
-
-        // Adicionar as zonas à lista
+        // Adicionar à lista
         listaZonas.adicionar(zonaSul);
         listaZonas.adicionar(zonaNorte);
         listaZonas.adicionar(zonaCentro);
         listaZonas.adicionar(zonaLeste);
         listaZonas.adicionar(zonaSudeste);
 
-        System.out.println(" > " + listaZonas.tamanho() + " zonas criadas.");
-        // Imprime a configuração de geração
-        try {
-            System.out.println(" > Intervalos de geração configurados (kg por dia - valor teórico):");
-            for (int i = 0; i < listaZonas.tamanho(); i++) {
-                ZonaUrbana zona = listaZonas.obter(i);
-                System.out.println("   - " + zona.getNome() + ": " +
-                        zona.getGeracaoMinima() + " a " +
-                        zona.getGeracaoMaxima() + " kg");
-            }
-        } catch (Exception e) {
-            System.out.println("   (Não foi possível exibir os intervalos - erro: " + e.getMessage() + ")");
+        System.out.println("\n > " + listaZonas.tamanho() + " zonas configuradas:");
+        for (int i = 0; i < listaZonas.tamanho(); i++) {
+            ZonaUrbana z = listaZonas.obter(i);
+            System.out.printf("   - %-10s: %d a %d kg/dia%n", z.getNome(), z.getGeracaoMinima(), z.getGeracaoMaxima());
         }
 
-        // --- 5. Criação das Estações de Transferência com configuração de tempos de espera ---
+        // --- 5. Criação das Estações de Transferência ---
         System.out.println("\n--- Configuração das Estações ---");
+        System.out.println("Defina o tempo máximo (em minutos) que caminhões pequenos podem esperar na fila antes de acionar um novo caminhão grande.");
 
-        // Perguntar ao usuário os tempos máximos de espera para cada estação
-        int tempoEsperaEstacaoA = perguntarTempo(scanner, "Tempo limite antes de adicionar um novo caminhão grande na Estação A (minutos):");
-        int tempoEsperaEstacaoB = perguntarTempo(scanner, "Tempo limite antes de adicionar um novo caminhão grande na Estação B (minutos):");
+        int tempoEsperaEstacaoA = perguntarTempo(scanner, "Tempo limite para " + ESTACAO_A + " (minutos):");
+        int tempoEsperaEstacaoB = perguntarTempo(scanner, "Tempo limite para " + ESTACAO_B + " (minutos):");
 
-        // Criar estações com os tempos configurados
         try {
-            listaEstacoes.adicionar(new EstacaoPadrao("Estação A", tempoEsperaEstacaoA));
-            listaEstacoes.adicionar(new EstacaoPadrao("Estação B", tempoEsperaEstacaoB));
+            listaEstacoes.adicionar(new EstacaoPadrao(ESTACAO_A, tempoEsperaEstacaoA));
+            listaEstacoes.adicionar(new EstacaoPadrao(ESTACAO_B, tempoEsperaEstacaoB));
 
-            System.out.println(" > " + listaEstacoes.tamanho() + " estações criadas.");
-            System.out.println(" > Tempos de espera configurados:");
+            System.out.println(" > " + listaEstacoes.tamanho() + " estações criadas:");
             for (int i = 0; i < listaEstacoes.tamanho(); i++) {
-                EstacaoTransferencia estacao = listaEstacoes.obter(i);
-                System.out.println("   - " + estacao.getNome() + ": " + estacao.getTempoMaximoEspera() + " minutos");
+                EstacaoTransferencia est = listaEstacoes.obter(i);
+                System.out.printf("   - %-10s: Limite Espera Pequenos = %d minutos%n", est.getNome(), est.getTempoMaximoEspera());
             }
-        } catch (Exception e) {
-            System.out.println("\n!!! ERRO ao criar estações: " + e.getMessage() + " !!!");
+        } catch (IllegalArgumentException e) {
+            System.err.println("\n!!! ERRO ao criar estações: " + e.getMessage() + " !!! Encerrando.");
+            scanner.close();
+            return;
         }
 
-        // --- 6. Configurar tempo de espera dos caminhões grandes ---
+        // --- 6. Configurar tempo de tolerância dos caminhões grandes ---
         System.out.println("\n--- Configuração de Tolerância dos Caminhões Grandes ---");
-        int toleranciaCaminhoesGrandes = perguntarTempo(scanner, "Tempo de tolerância de espera (em minutos) para caminhões grandes:");
+        System.out.println("Defina o tempo (em minutos) que um caminhão grande aguarda na estação antes de partir (se tiver carga).");
+        int toleranciaCaminhoesGrandes = perguntarTempo(scanner, "Tempo de tolerância de espera dos caminhões grandes (minutos):");
 
         // --- 7. Preparar o Simulador ---
         System.out.println("\n--- Configurando o Simulador ---");
         Simulador simulador = new Simulador();
 
-        // Variável para controlar a opção escolhida - declarada FORA dos blocos try/catch
-        int opcao = 0;
-
-        // Passa as listas criadas para o simulador usar
         try {
+            // Passa as listas e parâmetros para o simulador
             simulador.setListaCaminhoesPequenos(listaCaminhoesPequenos);
             simulador.setListaCaminhoesGrandes(listaCaminhoesGrandes);
             simulador.setListaZonas(listaZonas);
             simulador.setListaEstacoes(listaEstacoes);
+            simulador.setToleranciaCaminhoesGrandes(toleranciaCaminhoesGrandes); // Define a tolerância para os caminhões
 
-            // Configurar o tempo de tolerância dos caminhões grandes
-            simulador.setToleranciaCaminhoesGrandes(toleranciaCaminhoesGrandes);
+            System.out.println(" > Simulador configurado com sucesso!");
+            System.out.println("\n============================================================");
+            System.out.println("=== Configuração Concluída ===");
+            System.out.println("============================================================");
 
-            System.out.println("\n=== Configuração Concluída ===");
 
-            // --- 8. Perguntar se deseja iniciar imediatamente ou usar a interface ---
-            System.out.println("\nEscolha o tipo de interface:");
-            System.out.println("1 - Iniciar simulação diretamente (sem interface)");
-            System.out.println("2 - Usar interface de linha de comando");
-            System.out.println("3 - Usar interface gráfica Swing (recomendado)");
-
-            // Inicializa a variável opcao fora do loop
+            // --- 8. Escolha da Interface e Início ---
+            int opcao = 0;
             while (opcao < 1 || opcao > 3) {
+                System.out.println("\nEscolha como iniciar a simulação:");
+                System.out.println("  1 - Iniciar simulação diretamente (sem interface interativa)");
+                System.out.println("  2 - Usar interface de linha de comando (CLI)");
+                System.out.println("  3 - Usar interface gráfica Swing (GUI - recomendado)");
                 System.out.print("Opção (1, 2 ou 3): ");
                 try {
                     opcao = scanner.nextInt();
@@ -158,48 +158,53 @@ public class Main {
                         System.out.println("Opção inválida. Digite 1, 2 ou 3.");
                     }
                 } catch (InputMismatchException e) {
-                    System.out.println("Entrada inválida. Digite 1, 2 ou 3.");
+                    System.out.println("Entrada inválida. Digite um número (1, 2 ou 3).");
                     scanner.nextLine(); // Consome a entrada inválida
+                    opcao = 0; // Reseta para continuar no loop
                 }
             }
 
-            if (opcao == 1) {
-                // Iniciar imediatamente sem interface
-                System.out.println("\n=== Iniciando a Simulação... ===");
-                simulador.iniciar();
-                System.out.println("(Thread principal 'main' terminando. Simulação continua em background.)");
-                scanner.close(); // Fechamos o scanner apenas aqui
-            }
-            else if (opcao == 2) {
-                // Iniciar a interface de linha de comando
-                System.out.println("\n=== Iniciando Interface de Linha de Comando... ===");
-                InterfaceSimulador interfaceSimulador = new InterfaceSimulador(simulador);
-                interfaceSimulador.iniciar();
-                System.out.println("Interface de controle iniciada. Use o comando 'ajuda' para ver as opções.");
-                // Não fechamos o scanner aqui para a interface de linha de comando usar
-            }
-            else { // opcao == 3
-                // Iniciar a interface gráfica Swing
-                System.out.println("\n=== Iniciando Interface Gráfica... ===");
-                scanner.close(); // Podemos fechar o scanner aqui, pois não será mais usado
-
-                // Iniciar a interface Swing em uma thread separada (thread de eventos)
-                SwingUtilities.invokeLater(() -> {
-                    InterfaceSimuladorSwing gui = new InterfaceSimuladorSwing(simulador);
-                    gui.iniciar();
-                });
-
-                System.out.println("Interface gráfica iniciada.");
+            switch (opcao) {
+                case 1:
+                    System.out.println("\n=== Iniciando a Simulação Direta... ===");
+                    simulador.iniciar();
+                    System.out.println("(A simulação está rodando em background. O programa principal pode terminar.)");
+                    // Não fechar o scanner aqui pode manter o programa vivo se a simulação usar threads não-daemon
+                    // Se a simulação usa thread daemon (como no código atual), o scanner pode ser fechado.
+                    // scanner.close(); // Descomente se apropriado
+                    break;
+                case 2:
+                    System.out.println("\n=== Iniciando Interface de Linha de Comando (CLI)... ===");
+                    InterfaceSimulador interfaceCLI = new InterfaceSimulador(simulador);
+                    interfaceCLI.iniciar(); // A interface gerencia o loop de comandos
+                    // Não fechar o scanner aqui, a interface precisa dele
+                    break;
+                case 3:
+                    System.out.println("\n=== Iniciando Interface Gráfica (GUI)... ===");
+                    scanner.close(); // Fecha o scanner, não é mais necessário
+                    // Inicia a interface Swing na Event Dispatch Thread (EDT)
+                    SwingUtilities.invokeLater(() -> {
+                        InterfaceSimuladorSwing gui = new InterfaceSimuladorSwing(simulador);
+                        gui.iniciar(); // Torna a janela visível
+                    });
+                    System.out.println("(Interface gráfica iniciada em uma janela separada.)");
+                    break;
             }
 
-        } catch (Exception e) {
-            System.out.println("\n!!! ERRO ao configurar simulador: " + e.getMessage() + " !!!");
+        } catch (IllegalArgumentException e) {
+            System.err.println("\n!!! ERRO FATAL ao configurar simulador: " + e.getMessage() + " !!!");
             e.printStackTrace();
-            scanner.close(); // Fechamos o scanner em caso de erro
+            scanner.close(); // Fecha o scanner em caso de erro fatal
+        } catch (Exception e) { // Captura outras exceções inesperadas
+            System.err.println("\n!!! ERRO INESPERADO durante a configuração: " + e.getMessage() + " !!!");
+            e.printStackTrace();
+            scanner.close();
         }
     }
 
-    // --- Método Auxiliar para perguntar quantidade ao usuário ---
+    // --- Métodos Auxiliares para Entrada do Usuário ---
+
+    /** Pergunta ao usuário por uma quantidade (inteiro >= 0). */
     private static int perguntarQuantidade(Scanner scanner, String mensagem) {
         int quantidade = -1;
         while (quantidade < 0) {
@@ -212,37 +217,68 @@ public class Main {
                 }
             } catch (InputMismatchException e) {
                 System.out.println("Erro: Entrada inválida. Por favor, insira um número inteiro.");
-                scanner.next(); // Consome a entrada inválida
-                quantidade = -1;
+                scanner.nextLine(); // Consome a entrada inválida
+                quantidade = -1; // Força continuar no loop
             }
         }
         return quantidade;
     }
 
-    // --- Método Auxiliar para perguntar tempo de espera ---
+    /** Pergunta ao usuário por um tempo/intervalo (inteiro >= 1). */
     private static int perguntarTempo(Scanner scanner, String mensagem) {
         int tempo = -1;
-        while (tempo < 1) { // Exige pelo menos 1 minuto
+        while (tempo < 1) { // Exige pelo menos 1
             System.out.print(mensagem + " ");
             try {
                 tempo = scanner.nextInt();
                 scanner.nextLine(); // Consome a quebra de linha
                 if (tempo < 1) {
-                    System.out.println("Erro: O tempo deve ser pelo menos 1 minuto.");
+                    System.out.println("Erro: O valor deve ser pelo menos 1.");
                 }
             } catch (InputMismatchException e) {
                 System.out.println("Erro: Entrada inválida. Por favor, insira um número inteiro.");
-                scanner.next(); // Consome a entrada inválida
-                tempo = -1;
+                scanner.nextLine(); // Consome a entrada inválida
+                tempo = -1; // Força continuar no loop
             }
         }
         return tempo;
     }
 
-    // --- Método Auxiliar para adicionar caminhões à lista ---
+    /** Cria uma ZonaUrbana pedindo o intervalo de geração ao usuário. */
+    private static ZonaUrbana criarZonaComIntervalo(Scanner scanner, String nomeZona) {
+        System.out.println(" -> Configurando Zona " + nomeZona + ":");
+        int min = -1;
+        int max = -1;
+        while (min < 0 || max < 0 || min > max) {
+            min = perguntarQuantidade(scanner, "   Geração Mínima (kg/dia):");
+            max = perguntarQuantidade(scanner, "   Geração Máxima (kg/dia):");
+            if (min > max) {
+                System.out.println("Erro: O valor mínimo não pode ser maior que o máximo. Tente novamente.");
+                min = -1; // Força repetir
+            }
+        }
+        ZonaUrbana zona = new ZonaUrbana(nomeZona);
+        try {
+            zona.setIntervaloGeracao(min, max);
+        } catch (IllegalArgumentException e) {
+            // Embora perguntarQuantidade já valide >= 0, a validação em setIntervaloGeracao é uma segurança extra.
+            System.err.println("Erro inesperado ao definir intervalo para " + nomeZona + ": " + e.getMessage());
+            // Cria com valores padrão se a definição falhar (raro)
+            zona = new ZonaUrbana(nomeZona);
+        }
+        return zona;
+    }
+
+    /** Adiciona uma quantidade específica de caminhões pequenos com uma dada capacidade à lista. */
     private static void adicionarCaminhoes(Lista<CaminhaoPequeno> lista, int quantidade, int capacidade) {
+        if (quantidade < 0) return; // Segurança extra
         for (int i = 0; i < quantidade; i++) {
-            lista.adicionar(new CaminhaoPequenoPadrao(capacidade));
+            try {
+                lista.adicionar(new CaminhaoPequenoPadrao(capacidade));
+            } catch (IllegalArgumentException e) {
+                // Deve acontecer apenas se capacidade <= 0, o que não deve ocorrer com as constantes
+                System.err.println("Erro ao criar caminhão pequeno com capacidade " + capacidade + ": " + e.getMessage());
+            }
         }
     }
 }
