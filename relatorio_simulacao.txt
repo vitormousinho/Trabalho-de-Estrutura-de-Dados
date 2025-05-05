@@ -1,0 +1,29 @@
+========== RELATÓRIO DE ESTATÍSTICAS ==========
+
+--- MÉTRICAS GERAIS ---
+Lixo Total Gerado: 60459 kg
+Lixo Total Coletado: 60459 kg (100,00%)
+Lixo Total Transportado: 0 kg
+
+--- MÉTRICAS DE CAMINHÕES ---
+Caminhões Grandes Adicionados: 10
+Máximo de Caminhões Grandes Em Uso: 12
+Viagens de Caminhões Grandes: 0
+Caminhões Pequenos Atendidos: 0
+
+--- MÉTRICAS DE TEMPO ---
+Tempo Médio de Espera: 0,00 minutos
+
+--- MÉTRICAS POR ZONA ---
+Sul: 10757kg gerado, 10757kg coletado (100,00%)
+Norte: 12424kg gerado, 12424kg coletado (100,00%)
+Centro: 17140kg gerado, 17140kg coletado (100,00%)
+Leste: 11697kg gerado, 11697kg coletado (100,00%)
+Sudeste: 8441kg gerado, 8441kg coletado (100,00%)
+
+--- MÉTRICAS POR ESTAÇÃO ---
+
+--- CONCLUSÃO ---
+Número mínimo estimado de caminhões grandes necessários: 4
+
+=================================================

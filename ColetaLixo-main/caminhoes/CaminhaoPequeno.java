@@ -1,40 +1,45 @@
 package caminhoes;
 
-import java.util.Random; // Para gerar a placa aleatória
+import java.util.Random;
+import zonas.ZonaUrbana;
+import estacoes.EstacaoTransferencia;
 
 public abstract class CaminhaoPequeno {
     protected int capacidade;
     protected int cargaAtual;
-    protected String placa; // Novo atributo para a placa
+    protected String placa;
 
-    // --- Novos atributos para estado e viagem (a serem usados na lógica do Simulador) ---
-    // protected StatusCaminhao status; // Ex: OCIOSO, COLETANDO, VIAJANDO_ESTACAO, NA_FILA, etc. (Enum a ser criado)
-    // protected int tempoRestanteViagem;
-    // protected Zona zonaAtual; // Onde o caminhão está ou para onde vai
-    // protected EstacaoTransferencia estacaoDestino;
-    // protected int viagensRealizadasHoje;
-    // ------------------------------------------------------------------------------------
+    // Novos atributos para controle de estado
+    protected StatusCaminhao status;
+    protected int tempoRestanteViagem;
+    protected ZonaUrbana zonaAtual;
+    protected EstacaoTransferencia estacaoDestino;
+    protected int viagensRealizadasHoje;
+    protected int limiteViagensDiarias;
 
-    private static final Random random = new Random(); // Gerador de números aleatórios (static para ser compartilhado)
+    private static final Random random = new Random();
 
-    // Construtor agora também gera uma placa
     protected CaminhaoPequeno(int capacidade) {
         if (capacidade <= 0) {
             throw new IllegalArgumentException("Capacidade deve ser positiva.");
         }
         this.capacidade = capacidade;
         this.cargaAtual = 0;
-        this.placa = gerarPlacaAleatoria(); // Gera e atribui a placa
-        // Inicializar outros atributos aqui (status = StatusCaminhao.OCIOSO, tempoRestanteViagem = 0, etc.)
+        this.placa = gerarPlacaAleatoria();
+
+        // Inicializa os novos atributos
+        this.status = StatusCaminhao.OCIOSO;
+        this.tempoRestanteViagem = 0;
+        this.zonaAtual = null;
+        this.estacaoDestino = null;
+        this.viagensRealizadasHoje = 0;
+        this.limiteViagensDiarias = 10; // Valor padrão, pode ser configurado
     }
 
-    // Método auxiliar estático para gerar uma placa aleatória simples (LLLNNN)
     private static String gerarPlacaAleatoria() {
-        // Gera 3 letras maiúsculas aleatórias (A-Z)
         char l1 = (char) ('A' + random.nextInt(26));
         char l2 = (char) ('A' + random.nextInt(26));
         char l3 = (char) ('A' + random.nextInt(26));
-        // Gera 3 números aleatórios (0-9)
         int n1 = random.nextInt(10);
         int n2 = random.nextInt(10);
         int n3 = random.nextInt(10);
@@ -56,6 +61,64 @@ public abstract class CaminhaoPequeno {
         return carga;
     }
 
+    // Novos métodos para gestão do estado
+
+    /**
+     * Registra uma viagem realizada e verifica se o limite diário foi atingido
+     * @return true se ainda pode realizar viagens, false se atingiu o limite
+     */
+    public boolean registrarViagem() {
+        viagensRealizadasHoje++;
+        if (viagensRealizadasHoje >= limiteViagensDiarias) {
+            status = StatusCaminhao.INATIVO_LIMITE_VIAGENS;
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Reinicia o contador de viagens diárias
+     */
+    public void reiniciarViagensDiarias() {
+        viagensRealizadasHoje = 0;
+        if (status == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
+            status = StatusCaminhao.OCIOSO;
+        }
+    }
+
+    /**
+     * Define o destino do caminhão (zona ou estação)
+     */
+    public void definirDestino(ZonaUrbana zona) {
+        this.zonaAtual = zona;
+        this.estacaoDestino = null;
+        this.status = StatusCaminhao.VIAJANDO_ESTACAO;
+    }
+
+    public void definirDestino(EstacaoTransferencia estacao) {
+        this.estacaoDestino = estacao;
+        this.status = StatusCaminhao.VIAJANDO_ESTACAO;
+    }
+
+    /**
+     * Define o tempo de viagem restante
+     */
+    public void definirTempoViagem(int tempoViagem) {
+        this.tempoRestanteViagem = tempoViagem;
+    }
+
+    /**
+     * Processa o tempo de viagem, decrementando o contador
+     * @return true se a viagem terminou, false se ainda está em andamento
+     */
+    public boolean processarViagem() {
+        if (tempoRestanteViagem > 0) {
+            tempoRestanteViagem--;
+        }
+        return tempoRestanteViagem <= 0;
+    }
+
+    // Getters e Setters
     public int getCargaAtual() {
         return cargaAtual;
     }
@@ -68,12 +131,40 @@ public abstract class CaminhaoPequeno {
         return placa;
     }
 
-    // Adicione outros métodos get/set/lógica comuns se precisar
+    public StatusCaminhao getStatus() {
+        return status;
+    }
+
+    public void setStatus(StatusCaminhao status) {
+        this.status = status;
+    }
+
+    public ZonaUrbana getZonaAtual() {
+        return zonaAtual;
+    }
+
+    public EstacaoTransferencia getEstacaoDestino() {
+        return estacaoDestino;
+    }
+
+    public int getViagensRealizadasHoje() {
+        return viagensRealizadasHoje;
+    }
+
+    public int getLimiteViagensDiarias() {
+        return limiteViagensDiarias;
+    }
+
+    public void setLimiteViagensDiarias(int limite) {
+        if (limite <= 0) {
+            throw new IllegalArgumentException("Limite de viagens deve ser positivo.");
+        }
+        this.limiteViagensDiarias = limite;
+    }
 
     @Override
     public String toString() {
-        // Atualizado para incluir a placa
-        return String.format("CaminhaoPequeno[Placa=%s, Cap=%dkg, Carga=%dkg]",
-                placa, capacidade, cargaAtual);
+        return String.format("CaminhaoPequeno[Placa=%s, Cap=%dkg, Carga=%dkg, Status=%s]",
+                placa, capacidade, cargaAtual, status);
     }
 }
