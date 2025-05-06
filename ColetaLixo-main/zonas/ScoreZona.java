@@ -11,9 +11,9 @@ public class ScoreZona implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // Pesos para os diferentes fatores no cálculo do score
-    public static final double PESO_LIXO_ACUMULADO = 1.0;
-    public static final double PESO_TEMPO_SEM_COLETA = 0.5;
-    public static final double PESO_CAMINHOES_ATIVOS = -0.8;
+    public static final double PESO_LIXO_ACUMULADO = 2.0;
+    public static final double PESO_TEMPO_SEM_COLETA = 1.5;
+    public static final double PESO_CAMINHOES_ATIVOS = -2.0;
     public static final double PESO_TAXA_GERACAO = 0.3;
 
     private ZonaUrbana zona;

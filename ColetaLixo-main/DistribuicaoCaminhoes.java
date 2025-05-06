@@ -109,6 +109,11 @@ public class DistribuicaoCaminhoes implements Serializable {
                 }
 
                 distribuidos++;
+
+                // Log para debug
+                System.out.println("Caminhão " + caminhao.getPlaca() + " enviado para zona " +
+                        zonaDestino.getNome() + " (Score: " +
+                        scoresZonas.get(zonaDestino.getNome()).getScore() + ")");
             }
         }
 
@@ -189,14 +194,24 @@ public class DistribuicaoCaminhoes implements Serializable {
             return null;
         }
 
-        // Calcula a soma total dos scores
+        // Normaliza os scores para evitar valores negativos
+        double minScore = Double.MAX_VALUE;
+        for (ScoreZona sz : zonasOrdenadas) {
+            if (sz.getScore() < minScore) {
+                minScore = sz.getScore();
+            }
+        }
+
+        // Soma total dos scores normalizados
         double somaScores = 0;
         for (ScoreZona sz : zonasOrdenadas) {
-            somaScores += Math.max(0, sz.getScore()); // Considera apenas scores positivos
+            // Adiciona uma constante para todos os scores serem positivos
+            double scoreNormalizado = sz.getScore() - minScore + 1.0;
+            somaScores += scoreNormalizado;
         }
 
         if (somaScores <= 0) {
-            // Se todos os scores forem não-positivos, escolhe aleatoriamente
+            // Escolha aleatória se algo der errado
             int idx = random.nextInt(zonasOrdenadas.size());
             return encontrarZonaPorNome(zonasOrdenadas.get(idx).getZona().getNome(), todasZonas);
         }
@@ -205,17 +220,17 @@ public class DistribuicaoCaminhoes implements Serializable {
         double r = random.nextDouble() * somaScores;
         double countScore = 0;
 
-        // Caminha pela lista até encontrar a zona correspondente ao valor aleatório
+        // Caminha pela lista até encontrar a zona correspondente
         for (ScoreZona sz : zonasOrdenadas) {
-            double score = Math.max(0, sz.getScore());
-            countScore += score;
+            double scoreNormalizado = sz.getScore() - minScore + 1.0;
+            countScore += scoreNormalizado;
 
             if (countScore >= r) {
                 return encontrarZonaPorNome(sz.getZona().getNome(), todasZonas);
             }
         }
 
-        // Fallback para a primeira zona (não deveria chegar aqui)
+        // Fallback para a primeira zona
         return encontrarZonaPorNome(zonasOrdenadas.get(0).getZona().getNome(), todasZonas);
     }
 
@@ -243,6 +258,16 @@ public class DistribuicaoCaminhoes implements Serializable {
         for (ScoreZona score : scoresZonas.values()) {
             score.calcularScore();
         }
+
+        // Log para debug - mostra os scores calculados
+        System.out.println("--- Scores calculados para distribuição ---");
+        for (ScoreZona score : scoresZonas.values()) {
+            System.out.printf("Zona %-10s: Lixo=%5d kg, CPs=%2d, Tempo=%4d min, Score=%8.2f%n",
+                    score.getZona().getNome(), score.getZona().getLixoAcumulado(),
+                    score.getCaminhoesAtivos(), score.getTempoDesdeUltimaColeta(),
+                    score.getScore());
+        }
+        System.out.println("----------------------------------------");
     }
 
     /**
@@ -263,6 +288,7 @@ public class DistribuicaoCaminhoes implements Serializable {
     public void registrarColetaEmZona(String nomeZona) {
         if (scoresZonas.containsKey(nomeZona)) {
             scoresZonas.get(nomeZona).registrarColeta();
+            System.out.println("Registrada coleta na zona " + nomeZona + ", tempo desde última coleta resetado.");
         }
     }
 
