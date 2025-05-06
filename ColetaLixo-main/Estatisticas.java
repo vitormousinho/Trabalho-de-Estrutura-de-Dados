@@ -18,14 +18,14 @@ public class Estatisticas implements Serializable {
     private int lixoTotalTransportado = 0; // Lixo efetivamente levado ao aterro pelos caminhões grandes
 
     // --- Métricas de Caminhões Grandes ---
-    private int totalInicialCaminhoesGrandes = 0; // NOVO: Quantos começaram
+    private int totalInicialCaminhoesGrandes = 0; // Quantos começaram
     private int caminhoesGrandesAdicionados = 0;  // Quantos foram adicionados durante a simulação
-    private int maxCaminhoesGrandesEmUsoSimultaneo = 0; // Renomeado para clareza
-    private int viagensCaminhoesGrandesAterro = 0;    // Renomeado para clareza
+    private int maxCaminhoesGrandesEmUsoSimultaneo = 0; // Máximo de CGs operando ao mesmo tempo
+    private int viagensCaminhoesGrandesAterro = 0;    // Quantas viagens os CGs fizeram ao aterro
 
     // --- Métricas de Caminhões Pequenos ---
-    private int totalCaminhoesPequenosAtendidosEstacao = 0; // Renomeado para clareza
-    private long tempoTotalEsperaFilaPequenos = 0;      // Renomeado para clareza
+    private int totalCaminhoesPequenosAtendidosEstacao = 0; // Quantos CPs foram descarregados nas estações
+    private long tempoTotalEsperaFilaPequenos = 0;      // Soma do tempo de espera de todos CPs nas filas das estações
 
     // --- Estruturas Internas para Dados Detalhados ---
 
@@ -44,9 +44,9 @@ public class Estatisticas implements Serializable {
     private static class EntradaEstacao implements Serializable {
         private static final long serialVersionUID = 1L;
         String nomeEstacao;
-        int caminhoesPequenosRecebidos; // Renomeado (contava chegadas)
-        int caminhoesPequenosDescarregados; // Renomeado (contava atendimentos)
-        long tempoTotalEsperaFila; // Tempo acumulado de espera na fila
+        int caminhoesPequenosRecebidos; // Quantos CPs chegaram à estação
+        int caminhoesPequenosDescarregados; // Quantos CPs foram efetivamente descarregados
+        long tempoTotalEsperaFila; // Tempo acumulado de espera na fila para esta estação
 
         EntradaEstacao(String nome) {
             this.nomeEstacao = nome;
@@ -76,7 +76,7 @@ public class Estatisticas implements Serializable {
         lixoTotalGerado = 0;
         lixoTotalColetado = 0;
         lixoTotalTransportado = 0;
-        totalInicialCaminhoesGrandes = 0; // Reseta o inicial
+        totalInicialCaminhoesGrandes = 0;
         caminhoesGrandesAdicionados = 0;
         maxCaminhoesGrandesEmUsoSimultaneo = 0;
         viagensCaminhoesGrandesAterro = 0;
@@ -85,7 +85,7 @@ public class Estatisticas implements Serializable {
 
         estatisticasZonas = new Lista<>();
         estatisticasEstacoes = new Lista<>();
-        System.out.println("DEBUG: Estatísticas resetadas.");
+        // System.out.println("DEBUG: Estatísticas resetadas."); // Log pode ser útil para depuração
     }
 
 
@@ -99,10 +99,8 @@ public class Estatisticas implements Serializable {
                 return entrada;
             }
         }
-        // Se não achou, cria e adiciona
         EntradaZona novaEntrada = new EntradaZona(nomeZona);
         estatisticasZonas.adicionar(novaEntrada);
-        // System.out.println("DEBUG: Criada entrada de estatística para Zona: " + nomeZona);
         return novaEntrada;
     }
 
@@ -114,10 +112,8 @@ public class Estatisticas implements Serializable {
                 return entrada;
             }
         }
-        // Se não achou, cria e adiciona
         EntradaEstacao novaEntrada = new EntradaEstacao(nomeEstacao);
         estatisticasEstacoes.adicionar(novaEntrada);
-        // System.out.println("DEBUG: Criada entrada de estatística para Estação: " + nomeEstacao);
         return novaEntrada;
     }
 
@@ -126,7 +122,6 @@ public class Estatisticas implements Serializable {
     /** Registra a quantidade inicial de caminhões grandes no início da simulação. */
     public void registrarTotalInicialCaminhoesGrandes(int totalInicial) {
         this.totalInicialCaminhoesGrandes = totalInicial;
-        // System.out.println("DEBUG: Registrado total inicial de Caminhões Grandes: " + totalInicial);
     }
 
     /** Registra a geração de lixo em uma zona específica. */
@@ -194,32 +189,63 @@ public class Estatisticas implements Serializable {
 
     /** Calcula o percentual de lixo coletado em relação ao total gerado. */
     public double calcularPercentualLixoColetado() {
-        if (lixoTotalGerado == 0) return 0.0;
+        if (lixoTotalGerado == 0) return 0.0; // Evita divisão por zero se nenhum lixo for gerado
         return (double) lixoTotalColetado * 100.0 / lixoTotalGerado;
     }
 
     /**
      * Estima o número mínimo de caminhões grandes que seriam necessários para
      * transportar todo o lixo coletado, assumindo uma viagem por dia por caminhão grande.
-     * (Esta é uma estimativa SIMPLISTA e pode não refletir a dinâmica real da simulação).
-     *
      * @return Uma estimativa do número mínimo de caminhões grandes.
      */
     public int calcularEstimativaCaminhoesGrandesNecessarios() {
-        // Estimativa baseada no lixo TOTAL COLETADO pelos pequenos,
-        // dividido pela capacidade de um caminhão grande.
-        if (lixoTotalColetado == 0) return 0;
+        if (lixoTotalColetado == 0) return 0; // Se não há lixo coletado, não precisa de CG
 
-        // Capacidade padrão do caminhão grande - AGORA USA O IMPORT
         double capacidadeCG = CaminhaoGrande.CAPACIDADE_MAXIMA_KG;
-        if (capacidadeCG <= 0) return 1; // Evita divisão por zero
+        if (capacidadeCG <= 0) return 1; // Evita divisão por zero e supõe ao menos 1 se houver lixo
 
-        // Calcula quantos caminhões seriam necessários para levar todo o lixo coletado
-        int caminhoesMinimos = (int) Math.ceil(lixoTotalColetado / capacidadeCG);
-
-        // Garante ao menos 1 se algum lixo foi coletado
-        return Math.max(1, caminhoesMinimos);
+        // Arredonda para cima para garantir que todo o lixo seja transportado
+        int caminhoesMinimos = (int) Math.ceil((double) lixoTotalColetado / capacidadeCG);
+        return Math.max(0, caminhoesMinimos); // Garante que não seja negativo (embora ceil deva cuidar disso)
     }
+
+    // --- Métodos Getters para acesso aos valores das estatísticas ---
+    public int getLixoTotalGerado() {
+        return lixoTotalGerado;
+    }
+
+    public int getLixoTotalColetado() {
+        return lixoTotalColetado;
+    }
+
+    public int getLixoTotalTransportado() {
+        return lixoTotalTransportado;
+    }
+
+    public int getTotalInicialCaminhoesGrandes() {
+        return totalInicialCaminhoesGrandes;
+    }
+
+    public int getCaminhoesGrandesAdicionados() {
+        return caminhoesGrandesAdicionados;
+    }
+
+    public int getMaxCaminhoesGrandesEmUsoSimultaneo() {
+        return maxCaminhoesGrandesEmUsoSimultaneo;
+    }
+
+    public int getViagensCaminhoesGrandesAterro() {
+        return viagensCaminhoesGrandesAterro;
+    }
+
+    public int getTotalCaminhoesPequenosAtendidosEstacao() {
+        return totalCaminhoesPequenosAtendidosEstacao;
+    }
+
+    public long getTempoTotalEsperaFilaPequenos() {
+        return tempoTotalEsperaFilaPequenos;
+    }
+
 
     /**
      * Gera um relatório textual completo das estatísticas coletadas.
@@ -234,7 +260,9 @@ public class Estatisticas implements Serializable {
         sb.append(String.format("Lixo Total Gerado:        %,10d kg%n", lixoTotalGerado));
         sb.append(String.format("Lixo Total Coletado (CP): %,10d kg (%.2f%% do gerado)%n", lixoTotalColetado, calcularPercentualLixoColetado()));
         sb.append(String.format("Lixo Total Transportado(CG):%,10d kg%n", lixoTotalTransportado));
-        // Poderia calcular lixo não coletado = gerado - coletado
+        int lixoNaoColetado = lixoTotalGerado - lixoTotalColetado;
+        sb.append(String.format("Lixo Não Coletado (Zonas):%,10d kg%n", Math.max(0, lixoNaoColetado)));
+
 
         sb.append(separadorLinha);
         sb.append("--- MÉTRICAS DE CAMINHÕES GRANDES (CG) ---\n");
@@ -248,7 +276,6 @@ public class Estatisticas implements Serializable {
         sb.append("--- MÉTRICAS DE CAMINHÕES PEQUENOS (CP) ---\n");
         sb.append(String.format("Total Atendidos Estações: %d%n", totalCaminhoesPequenosAtendidosEstacao));
         sb.append(String.format("Tempo Médio Espera Fila:  %.2f minutos%n", calcularTempoMedioEsperaFilaPequenos()));
-        // Poderia adicionar estatísticas por tipo de caminhão pequeno se a informação fosse registrada
 
         sb.append(separadorLinha);
         sb.append("--- MÉTRICAS POR ZONA ---\n");
@@ -279,7 +306,6 @@ public class Estatisticas implements Serializable {
         sb.append(separadorLinha);
         sb.append("--- CONCLUSÃO ESTIMADA ---\n");
         sb.append(String.format("Estimativa Mínima de CGs (baseado no lixo coletado): %d%n", calcularEstimativaCaminhoesGrandesNecessarios()));
-        // Lembrar que esta é uma estimativa muito simples. A dinâmica da fila e viagens é mais complexa.
 
         sb.append("\n========================================================\n");
         return sb.toString();
@@ -291,11 +317,10 @@ public class Estatisticas implements Serializable {
      * @throws IOException Se ocorrer um erro durante a escrita do arquivo.
      */
     public void salvarRelatorio(String nomeArquivo) throws IOException {
-        System.out.println("Salvando relatório em: " + nomeArquivo);
+        System.out.println("Salvando relatório em: " + nomeArquivo); // Este System.out será capturado pela GUI
         try (PrintWriter writer = new PrintWriter(new FileWriter(nomeArquivo), true)) { // true para autoFlush
             writer.print(gerarRelatorio());
         }
-        System.out.println("Relatório salvo com sucesso.");
+        System.out.println("Relatório salvo com sucesso em " + nomeArquivo + ".");
     }
-
 }

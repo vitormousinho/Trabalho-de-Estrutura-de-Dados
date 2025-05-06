@@ -24,6 +24,9 @@ public abstract class CaminhaoPequeno {
     protected int viagensRealizadasHoje;
     protected int limiteViagensDiarias;
 
+    // NOVO ATRIBUTO para lembrar a zona de origem
+    protected ZonaUrbana zonaDeOrigemParaRetorno;
+
     private static final Random random = new Random(); // Gerador de números aleatórios para placa
 
     /**
@@ -41,14 +44,13 @@ public abstract class CaminhaoPequeno {
         this.cargaAtual = 0;
         this.placa = gerarPlacaAleatoria();
 
-        // Inicializa os novos atributos
         this.status = StatusCaminhao.OCIOSO;
         this.tempoRestanteViagem = 0;
         this.zonaAtual = null;
         this.estacaoDestino = null;
+        this.zonaDeOrigemParaRetorno = null; // Inicializa o novo atributo
         this.viagensRealizadasHoje = 0;
-        // Antes: this.limiteViagensDiarias = 10;
-        this.limiteViagensDiarias = LIMITE_VIAGENS_DIARIAS_PADRAO; // Usa a constante
+        this.limiteViagensDiarias = LIMITE_VIAGENS_DIARIAS_PADRAO;
     }
 
     /**
@@ -88,7 +90,6 @@ public abstract class CaminhaoPequeno {
     public int descarregar() {
         int cargaDescarregada = cargaAtual;
         cargaAtual = 0;
-        // Poderia mudar o status aqui se necessário, mas geralmente é feito pelo chamador (Estacao ou Simulador)
         return cargaDescarregada;
     }
 
@@ -124,8 +125,9 @@ public abstract class CaminhaoPequeno {
      */
     public void definirDestino(ZonaUrbana zona) {
         this.zonaAtual = zona;
+        this.zonaDeOrigemParaRetorno = zona; // MODIFICADO: Atualiza a zona de origem também
         this.estacaoDestino = null; // Garante que não há estação destino
-        // O status (COLETANDO, RETORNANDO_ZONA) deve ser definido pelo chamador
+        // O status (COLETANDO, RETORNANDO_ZONA) deve ser definido pelo chamador (Simulador)
     }
 
     /**
@@ -133,8 +135,14 @@ public abstract class CaminhaoPequeno {
      * @param estacao A EstacaoTransferencia de destino.
      */
     public void definirDestino(EstacaoTransferencia estacao) {
+        // MODIFICADO: Guarda a zona atual como zona de origem antes de zerá-la
+        if (this.zonaAtual != null) {
+            this.zonaDeOrigemParaRetorno = this.zonaAtual;
+        }
+        // Se this.zonaAtual já era null, zonaDeOrigemParaRetorno manterá seu valor anterior.
+
         this.estacaoDestino = estacao;
-        this.zonaAtual = null; // Garante que não há zona atual (ele está em viagem para estação)
+        this.zonaAtual = null; // Garante que não há zona ATUAL de coleta (ele está em viagem PARA estação)
         this.status = StatusCaminhao.VIAJANDO_ESTACAO; // Define o status apropriado
     }
 
@@ -176,7 +184,6 @@ public abstract class CaminhaoPequeno {
     }
 
     public void setStatus(StatusCaminhao status) {
-        // Poderia adicionar validações de transição de status se necessário
         this.status = status;
     }
 
@@ -186,6 +193,11 @@ public abstract class CaminhaoPequeno {
 
     public EstacaoTransferencia getEstacaoDestino() {
         return estacaoDestino;
+    }
+
+    // NOVO GETTER
+    public ZonaUrbana getZonaDeOrigemParaRetorno() {
+        return zonaDeOrigemParaRetorno;
     }
 
     public int getViagensRealizadasHoje() {
@@ -215,9 +227,12 @@ public abstract class CaminhaoPequeno {
             destinoStr = " -> " + estacaoDestino.getNome();
         } else if ((status == StatusCaminhao.COLETANDO || status == StatusCaminhao.RETORNANDO_ZONA) && zonaAtual != null) {
             destinoStr = " @ " + zonaAtual.getNome();
-        } else if (status == StatusCaminhao.NA_FILA && estacaoDestino != null){
+        } else if (status == StatusCaminhao.NA_FILA && estacaoDestino != null){ // Modificado para usar estacaoDestino se estiver na fila
             destinoStr = " [Fila " + estacaoDestino.getNome() + "]";
+        } else if (status == StatusCaminhao.OCIOSO && zonaDeOrigemParaRetorno != null) { // Opcional: mostrar última zona se ocioso
+            destinoStr = " (Última zona: " + zonaDeOrigemParaRetorno.getNome() + ")";
         }
+
 
         return String.format("CP[%s, Cap=%dkg, Carga=%dkg, St=%s%s, V=%d/%d]",
                 placa, capacidade, cargaAtual, status, destinoStr, viagensRealizadasHoje, limiteViagensDiarias);
