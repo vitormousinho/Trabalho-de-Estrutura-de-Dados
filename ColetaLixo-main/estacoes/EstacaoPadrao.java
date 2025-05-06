@@ -14,13 +14,14 @@ public class EstacaoPadrao extends EstacaoTransferencia {
     private Fila<CaminhaoPequeno> filaCaminhoesPequenos; // Fila para caminhões pequenos esperando
     private CaminhaoGrande caminhaoGrandeAtual; // Caminhão grande atualmente na estação (ou null)
     private int tempoEsperaCaminhaoGrandeAtual; // Contador de tempo que o caminhão grande está esperando
-    private int tempoPrimeiroCaminhaoNaFila; // Contador de tempo que o PRIMEIRO caminhão pequeno está esperando
+    private int tempoPrimeiroCaminhaoNaFila; // Contador de tempo que o PRIMEIRO caminhão pequeno está esperando (para alerta)
+
 
     /**
      * Construtor da EstacaoPadrao.
      * @param nome Nome da estação.
      * @param tempoMaximoEsperaPequenos Tempo máximo (em minutos) que um caminhão pequeno pode esperar
-     * na fila antes de acionar a adição de um novo caminhão grande.
+     * na fila antes de acionar a adição de um novo caminhão grande (lógica de alerta).
      * @throws IllegalArgumentException se tempoMaximoEsperaPequenos for menor que 1.
      */
     public EstacaoPadrao(String nome, int tempoMaximoEsperaPequenos) {
@@ -32,7 +33,7 @@ public class EstacaoPadrao extends EstacaoTransferencia {
     }
 
     /**
-     * Construtor alternativo com tempo máximo de espera padrão (30 minutos).
+     * Construtor alternativo com tempo máximo de espera padrão (30 minutos) para alerta.
      * @param nome Nome da estação.
      */
     public EstacaoPadrao(String nome) {
@@ -40,105 +41,121 @@ public class EstacaoPadrao extends EstacaoTransferencia {
     }
 
     /**
-     * Recebe um caminhão pequeno que chegou à estação e o adiciona à fila de espera.
+     * Recebe um caminhão pequeno que chegou à estação, registra seu tempo de chegada na fila
+     * e o adiciona à fila de espera.
      * @param caminhao O CaminhaoPequeno que chegou.
+     * @param tempoSimuladoAtual O tempo atual da simulação para registrar a chegada.
      */
-    @Override
-    public void receberCaminhaoPequeno(CaminhaoPequeno caminhao) {
+    public void receberCaminhaoPequeno(CaminhaoPequeno caminhao, int tempoSimuladoAtual) {
         if (caminhao != null) {
+            caminhao.setTempoChegadaNaFila(tempoSimuladoAtual); // Define o tempo de chegada
             filaCaminhoesPequenos.adicionar(caminhao);
-            // System.out.printf("EST %s: Caminhão %s entrou na fila. Total: %d%n",
-            //                    nome, caminhao.getPlaca(), filaCaminhoesPequenos.tamanho());
-            // Se a fila estava vazia, reseta o contador de tempo do primeiro
-            if (filaCaminhoesPequenos.tamanho() == 1) {
-                tempoPrimeiroCaminhaoNaFila = 0;
+            // System.out.printf("EST %s: CP %s entrou na fila (chegada em %d). Total: %d%n",
+            //                    nome, caminhao.getPlaca(), tempoSimuladoAtual, filaCaminhoesPequenos.tamanho());
+            if (filaCaminhoesPequenos.tamanho() == 1) { // Se ele é o novo primeiro da fila
+                tempoPrimeiroCaminhaoNaFila = 0; // Reseta contador de tempo de alerta para este caminhão
             }
         } else {
-            System.err.println("AVISO: Tentativa de adicionar caminhão nulo à fila da estação " + nome);
+            System.err.println("AVISO EST " + nome + ": Tentativa de adicionar caminhão nulo à fila.");
         }
     }
 
     /**
+     * Sobrecarga para manter compatibilidade ou para casos onde o tempo não é crucial.
+     * É RECOMENDADO usar a versão que recebe `tempoSimuladoAtual`.
+     * @param caminhao O CaminhaoPequeno que chegou.
+     */
+    @Override
+    public void receberCaminhaoPequeno(CaminhaoPequeno caminhao) {
+        System.err.println("AVISO EST " + nome + ": Método receberCaminhaoPequeno(caminhao) SEM tempoSimuladoAtual foi chamado." +
+                " O tempo de espera na fila não será calculado com precisão para o CP " + (caminhao != null ? caminhao.getPlaca() : "NULO") + ".");
+        if (caminhao != null) {
+            caminhao.setTempoChegadaNaFila(-1); // Indica que o tempo de chegada não foi precisamente registrado
+            filaCaminhoesPequenos.adicionar(caminhao);
+            if (filaCaminhoesPequenos.tamanho() == 1) {
+                tempoPrimeiroCaminhaoNaFila = 0;
+            }
+        }
+    }
+
+
+    /**
      * Processa a fila de caminhões pequenos, tentando descarregar o primeiro
      * caminhão da fila no caminhão grande atual.
-     * Incrementa o contador de tempo de espera do primeiro caminhão na fila.
      *
-     * @return O CaminhaoPequeno que acabou de ser processado (descarregado),
-     * ou null se nenhum caminhão foi processado neste ciclo.
+     * @param tempoSimuladoAtual O tempo atual da simulação, usado para calcular o tempo de espera.
+     * @return Um objeto ResultadoProcessamentoFila contendo o caminhão processado e seu tempo de espera,
+     * ou um resultado indicando que nenhum caminhão foi processado.
      */
-    public CaminhaoPequeno processarFila() {
-        // Se não há caminhões pequenos na fila, não há o que processar
+    public ResultadoProcessamentoFila processarFila(int tempoSimuladoAtual) {
         if (filaCaminhoesPequenos.estaVazia()) {
-            tempoPrimeiroCaminhaoNaFila = 0; // Reseta o tempo se não há ninguém esperando
-            return null; // Nenhum caminhão processado
+            tempoPrimeiroCaminhaoNaFila = 0; // Reseta o tempo de alerta se não há ninguém esperando
+            return new ResultadoProcessamentoFila(null, 0); // Nenhum caminhão processado
         }
 
-        // Se há caminhões na fila, incrementa o tempo de espera do primeiro
+        // Incrementa o contador de tempo de alerta para o PRIMEIRO caminhão da fila
         tempoPrimeiroCaminhaoNaFila++;
 
-        // Verifica se há um caminhão grande presente para receber a carga
         if (caminhaoGrandeAtual == null) {
-            // Não há caminhão grande, não podemos processar a fila agora.
-            // A estação sinalizará que precisa de um (método precisaCaminhaoGrande).
-            // System.out.println("EST " + nome + ": Fila com " + filaCaminhoesPequenos.tamanho() + ", mas aguardando caminhão grande."); // Log opcional
-            return null; // Nenhum caminhão processado
+            // System.out.println("EST " + nome + ": Fila com " + filaCaminhoesPequenos.tamanho() + ", mas aguardando caminhão grande.");
+            return new ResultadoProcessamentoFila(null, 0); // Nenhum caminhão processado, precisa de CG
         }
 
-        // Temos caminhão grande e temos fila. Vamos processar o primeiro.
         CaminhaoPequeno caminhaoPequeno = filaCaminhoesPequenos.primeiroElemento(); // Apenas olha (peek)
 
-        // Verifica se o caminhão grande tem espaço para a carga INTEIRA do caminhão pequeno
-        // (Poderia ser alterado para descarregar parcial se desejado, mas atual é mais simples)
         if (caminhaoGrandeAtual.getCargaAtual() + caminhaoPequeno.getCargaAtual() <= caminhaoGrandeAtual.getCapacidadeMaxima()) {
+            caminhaoPequeno = filaCaminhoesPequenos.remover(); // AGORA remove da fila
 
-            // Remove o caminhão da fila AGORA que sabemos que podemos processá-lo
-            caminhaoPequeno = filaCaminhoesPequenos.remover();
+            int cargaDescarregada = caminhaoPequeno.descarregar();
+            caminhaoGrandeAtual.carregar(cargaDescarregada);
 
-            // Transfere a carga
-            int cargaDescarregada = caminhaoPequeno.descarregar(); // Esvazia o caminhão pequeno
-            caminhaoGrandeAtual.carregar(cargaDescarregada); // Carrega o caminhão grande
+            long tempoDeEspera = 0;
+            if (caminhaoPequeno.getTempoChegadaNaFila() != -1) { // Verifica se o tempo de chegada foi registrado
+                tempoDeEspera = tempoSimuladoAtual - caminhaoPequeno.getTempoChegadaNaFila();
+                if (tempoDeEspera < 0) { // Segurança, não deve acontecer em simulação linear
+                    // System.err.println("AVISO EST " + nome + ": Tempo de espera calculado negativo para CP " + caminhaoPequeno.getPlaca() + ". Resetado para 0.");
+                    tempoDeEspera = 0;
+                }
+            } else {
+                System.err.println("AVISO EST " + nome + ": CP " + caminhaoPequeno.getPlaca() +
+                        " processado, mas seu tempo de chegada na fila não foi registrado. Tempo de espera considerado 0.");
+            }
 
-            System.out.printf("EST %s: Caminhão %s descarregou %dkg. CG Carga: %d/%d kg. Fila restante: %d.%n",
-                    nome, caminhaoPequeno.getPlaca(), cargaDescarregada,
+            System.out.printf("EST %s: CP %s (esperou %d min) descarregou %dkg. CG Carga: %d/%d kg. Fila restante: %d.%n",
+                    nome, caminhaoPequeno.getPlaca(), tempoDeEspera, cargaDescarregada,
                     caminhaoGrandeAtual.getCargaAtual(), caminhaoGrandeAtual.getCapacidadeMaxima(),
                     filaCaminhoesPequenos.tamanho());
 
-            // Reseta o contador de tempo de espera do (novo) primeiro da fila (se houver)
-            tempoPrimeiroCaminhaoNaFila = 0;
+            tempoPrimeiroCaminhaoNaFila = 0; // Reseta tempo de alerta, pois o primeiro saiu (ou a fila ficou vazia)
 
-            // Verifica se o caminhão grande ficou cheio após descarregar
             if (caminhaoGrandeAtual.prontoParaPartir()) {
-                System.out.println("EST " + nome + ": Caminhão grande ficou cheio e partirá para o aterro.");
-                // A partida será tratada no método gerenciarTempoEsperaCaminhaoGrande ou pelo Simulador
+                System.out.println("EST " + nome + ": Caminhão grande ("+caminhaoGrandeAtual+") ficou cheio após descarregar CP " + caminhaoPequeno.getPlaca() + ".");
+                // A partida será tratada no método gerenciarTempoEsperaCaminhaoGrande
             }
-
-            return caminhaoPequeno; // Retorna o caminhão que foi processado
-
+            return new ResultadoProcessamentoFila(caminhaoPequeno, tempoDeEspera);
         } else {
             // Caminhão grande não tem espaço suficiente para a carga completa do pequeno.
-            // O caminhão grande atual precisa partir para o aterro para liberar espaço.
-            System.out.println("EST " + nome + ": Caminhão grande sem espaço para carga de " + caminhaoPequeno.getPlaca() +
-                    " (" + caminhaoPequeno.getCargaAtual() + "kg). Caminhão grande precisa partir.");
+            System.out.println("EST " + nome + ": Caminhão grande ("+caminhaoGrandeAtual+") sem espaço para carga de CP " + caminhaoPequeno.getPlaca() +
+                    " (" + caminhaoPequeno.getCargaAtual() + "kg). CG precisa partir.");
             // A partida será tratada no método gerenciarTempoEsperaCaminhaoGrande
-            return null; // Nenhum caminhão pequeno foi processado neste ciclo
+            return new ResultadoProcessamentoFila(null, 0);
         }
     }
 
     /**
      * Gerencia o tempo de espera do caminhão grande atual.
      * Se o tempo exceder a tolerância e o caminhão tiver carga, ele parte para o aterro.
+     * Também parte se estiver cheio ou se for necessário para liberar espaço para a fila.
      *
      * @return O CaminhaoGrande que partiu para o aterro, ou null se nenhum partiu.
      */
     public CaminhaoGrande gerenciarTempoEsperaCaminhaoGrande() {
         if (caminhaoGrandeAtual == null) {
-            tempoEsperaCaminhaoGrandeAtual = 0; // Não há caminhão, reseta contador
-            return null; // Nenhum caminhão para gerenciar
+            tempoEsperaCaminhaoGrandeAtual = 0;
+            return null;
         }
 
-        // Incrementa o tempo de espera do caminhão grande
         tempoEsperaCaminhaoGrandeAtual++;
-
         boolean devePartir = false;
         String motivoPartida = "";
 
@@ -153,38 +170,32 @@ public class EstacaoPadrao extends EstacaoTransferencia {
                 devePartir = true;
                 motivoPartida = "excedeu a tolerância de espera (" + caminhaoGrandeAtual.getToleranciaEspera() + " min)";
             } else {
-                // Tolerância excedida, mas está vazio. Ele continua esperando.
-                // System.out.println("EST " + nome + ": Tolerância do CG excedida, mas está vazio. Continua esperando."); // Log opcional
-                tempoEsperaCaminhaoGrandeAtual = 0; // Reinicia o contador de espera dele? Ou deixa acumular? Vamos reiniciar.
+                // Tolerância excedida, mas está vazio. Ele continua esperando e reseta seu contador de espera.
+                tempoEsperaCaminhaoGrandeAtual = 0;
             }
         }
-        // Condição 3: Falta de espaço (detectada em processarFila, mas precisa acionar partida)
-        // Esta condição é implícita: se processarFila não conseguiu adicionar carga por falta de espaço,
-        // o caminhão grande deve partir. Podemos verificar isso aqui também.
-        else if (!filaCaminhoesPequenos.estaVazia()) {
-            CaminhaoPequeno proximo = filaCaminhoesPequenos.primeiroElemento();
-            if (caminhaoGrandeAtual.getCargaAtual() + proximo.getCargaAtual() > caminhaoGrandeAtual.getCapacidadeMaxima() && caminhaoGrandeAtual.getCargaAtual() > 0) {
+        // Condição 3: Falta de espaço para o próximo da fila (e o CG tem carga)
+        // Esta condição é importante para evitar deadlock se o CG estiver parcialmente cheio mas não o suficiente para o próximo CP.
+        else if (!filaCaminhoesPequenos.estaVazia() && caminhaoGrandeAtual.getCargaAtual() > 0) {
+            CaminhaoPequeno proximoCP = filaCaminhoesPequenos.primeiroElemento();
+            if (caminhaoGrandeAtual.getCargaAtual() + proximoCP.getCargaAtual() > caminhaoGrandeAtual.getCapacidadeMaxima()) {
                 devePartir = true;
-                motivoPartida = "não há espaço para o próximo caminhão (" + proximo.getPlaca() + ")";
+                motivoPartida = "não há espaço para o próximo CP da fila (" + proximoCP.getPlaca() + ")";
             }
         }
 
-
-        // Se alguma condição de partida foi atendida
         if (devePartir) {
-            System.out.printf("EST %s: Caminhão grande partindo para aterro (%s). Carga: %dkg.%n",
-                    nome, motivoPartida, caminhaoGrandeAtual.getCargaAtual());
+            System.out.printf("EST %s: Caminhão grande (%s) partindo para aterro (%s). Carga: %dkg.%n",
+                    nome, caminhaoGrandeAtual.toString(), motivoPartida, caminhaoGrandeAtual.getCargaAtual());
             CaminhaoGrande caminhaoQuePartiu = caminhaoGrandeAtual;
-            caminhaoQuePartiu.descarregar(); // Simula a viagem e esvazia a carga
+            // A carga real transportada será pega pelo Simulador antes de chamar caminhaoQuePartiu.descarregar()
 
-            // Libera a "vaga" na estação
-            this.caminhaoGrandeAtual = null;
+            this.caminhaoGrandeAtual = null; // Libera a "vaga" na estação
             this.tempoEsperaCaminhaoGrandeAtual = 0; // Reseta contador
 
-            return caminhaoQuePartiu; // Retorna o caminhão que partiu
+            return caminhaoQuePartiu;
         }
-
-        return null; // Nenhum caminhão partiu
+        return null;
     }
 
     /**
@@ -195,26 +206,25 @@ public class EstacaoPadrao extends EstacaoTransferencia {
      */
     public boolean atribuirCaminhaoGrande(CaminhaoGrande caminhao) {
         if (caminhao == null) {
-            System.err.println("ERRO: Tentativa de atribuir caminhão grande nulo à estação " + nome);
+            System.err.println("ERRO EST " + nome + ": Tentativa de atribuir caminhão grande nulo.");
             return false;
         }
         if (this.caminhaoGrandeAtual != null) {
-            System.out.println("EST " + nome + ": Já existe um caminhão grande aqui. Não é possível atribuir outro.");
-            return false; // Já tem um caminhão
+            System.out.println("EST " + nome + ": Já existe um caminhão grande (" + this.caminhaoGrandeAtual + "). Não é possível atribuir " + caminhao + ".");
+            return false;
         }
         this.caminhaoGrandeAtual = caminhao;
         this.tempoEsperaCaminhaoGrandeAtual = 0; // Reseta o tempo de espera do novo caminhão
-        System.out.println("EST " + nome + ": Novo caminhão grande atribuído.");
+        System.out.println("EST " + nome + ": Novo caminhão grande (" + caminhao + ") atribuído.");
         return true;
     }
 
     /**
-     * Verifica se o tempo de espera do primeiro caminhão pequeno na fila excedeu
+     * Verifica se o tempo de espera do primeiro caminhão pequeno na fila (para alerta) excedeu
      * o limite máximo configurado para a estação.
      * @return true se o tempo foi excedido e a fila não está vazia, false caso contrário.
      */
     public boolean tempoEsperaExcedido() {
-        // Usa o tempoMaximoEspera definido no construtor da superclasse
         return !filaCaminhoesPequenos.estaVazia() && tempoPrimeiroCaminhaoNaFila >= getTempoMaximoEspera();
     }
 
@@ -227,30 +237,27 @@ public class EstacaoPadrao extends EstacaoTransferencia {
         return caminhaoGrandeAtual == null && !filaCaminhoesPequenos.estaVazia();
     }
 
-    /**
-     * Retorna o número de caminhões pequenos atualmente na fila de espera.
-     * @return O tamanho da fila.
-     */
+    // --- Getters ---
     public int getCaminhoesNaFila() {
         return filaCaminhoesPequenos.tamanho();
     }
 
-    /**
-     * Verifica se há um caminhão grande atualmente alocado nesta estação.
-     * @return true se há um caminhão grande, false caso contrário.
-     */
     public boolean temCaminhaoGrande() {
         return caminhaoGrandeAtual != null;
     }
 
-    /**
-     * Retorna a carga atual do caminhão grande alocado na estação.
-     * @return A carga em kg, ou 0 se não houver caminhão grande.
-     */
     public int getCargaCaminhaoGrandeAtual() {
         return (caminhaoGrandeAtual != null) ? caminhaoGrandeAtual.getCargaAtual() : 0;
     }
 
+    /**
+     * Retorna o caminhão grande atualmente alocado nesta estação.
+     * Necessário para o Simulador poder atualizar a tolerância de espera, por exemplo.
+     * @return O CaminhaoGrande atual, ou null se não houver.
+     */
+    public CaminhaoGrande getCaminhaoGrandeAtual() {
+        return this.caminhaoGrandeAtual;
+    }
 
     /**
      * Método legado da interface, agora a lógica principal está em `atribuirCaminhaoGrande`
@@ -260,7 +267,7 @@ public class EstacaoPadrao extends EstacaoTransferencia {
     @Override
     @Deprecated
     public void descarregarParaCaminhaoGrande(CaminhaoGrande caminhao) {
-        System.out.println("AVISO: Método descarregarParaCaminhaoGrande(CG) chamado em EstacaoPadrao (usar atribuir/processar).");
+        System.out.println("AVISO EST " + nome + ": Método descarregarParaCaminhaoGrande(CG) chamado em EstacaoPadrao (usar atribuir/processar).");
         atribuirCaminhaoGrande(caminhao);
     }
 }

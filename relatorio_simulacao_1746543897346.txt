@@ -1,0 +1,35 @@
+
+========== RELATÓRIO FINAL DE ESTATÍSTICAS ==========
+
+--- MÉTRICAS GERAIS DE LIXO ---
+Lixo Total Gerado:                 0 kg
+Lixo Total Coletado (CP):          0 kg (0,00% do gerado)
+Lixo Total Transportado(CG):         0 kg
+Lixo Não Coletado (Zonas):         0 kg
+
+--------------------------------------------------------
+--- MÉTRICAS DE CAMINHÕES GRANDES (CG) ---
+Frota Inicial:            1
+Adicionados Durante Sim.: 0
+Frota Final Total:        1
+Máximo em Uso Simultâneo: 0
+Viagens para Aterro:      0
+
+--------------------------------------------------------
+--- MÉTRICAS DE CAMINHÕES PEQUENOS (CP) ---
+Total Atendidos Estações: 0
+Tempo Médio Espera Fila:  0,00 minutos
+
+--------------------------------------------------------
+--- MÉTRICAS POR ZONA ---
+(Nenhuma zona processada)
+
+--------------------------------------------------------
+--- MÉTRICAS POR ESTAÇÃO ---
+(Nenhuma estação processada)
+
+--------------------------------------------------------
+--- CONCLUSÃO ESTIMADA ---
+Estimativa Mínima de CGs (baseado no lixo coletado): 0
+
+========================================================

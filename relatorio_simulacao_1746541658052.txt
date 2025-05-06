@@ -1,0 +1,39 @@
+
+========== RELATÓRIO FINAL DE ESTATÍSTICAS ==========
+
+--- MÉTRICAS GERAIS DE LIXO ---
+Lixo Total Gerado:            26.582 kg
+Lixo Total Coletado (CP):     20.800 kg (78,25% do gerado)
+Lixo Total Transportado(CG):     8.000 kg
+Lixo Não Coletado (Zonas):     5.782 kg
+
+--------------------------------------------------------
+--- MÉTRICAS DE CAMINHÕES GRANDES (CG) ---
+Frota Inicial:            1
+Adicionados Durante Sim.: 0
+Frota Final Total:        1
+Máximo em Uso Simultâneo: 1
+Viagens para Aterro:      3
+
+--------------------------------------------------------
+--- MÉTRICAS DE CAMINHÕES PEQUENOS (CP) ---
+Total Atendidos Estações: 3
+Tempo Médio Espera Fila:  1,00 minutos
+
+--------------------------------------------------------
+--- MÉTRICAS POR ZONA ---
+  - Sul       : Gerado:   4.709 kg | Coletado:   4.709 kg (100,00%)
+  - Norte     : Gerado:   4.950 kg | Coletado:   4.950 kg (100,00%)
+  - Centro    : Gerado:   5.782 kg | Coletado:       0 kg (0,00%)
+  - Leste     : Gerado:   5.567 kg | Coletado:   5.567 kg (100,00%)
+  - Sudeste   : Gerado:   5.574 kg | Coletado:   5.574 kg (100,00%)
+
+--------------------------------------------------------
+--- MÉTRICAS POR ESTAÇÃO ---
+  - Estação A : CP Recebidos:     3 | CP Descarregados:     3 | T. Médio Espera Fila: 1,00 min
+
+--------------------------------------------------------
+--- CONCLUSÃO ESTIMADA ---
+Estimativa Mínima de CGs (baseado no lixo coletado): 2
+
+========================================================
