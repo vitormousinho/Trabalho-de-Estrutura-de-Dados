@@ -7,6 +7,7 @@ import Estruturas.Lista;
 import caminhoes.CaminhaoPequeno;
 import caminhoes.CaminhaoGrande;
 import caminhoes.StatusCaminhao;
+import zonas.MapaUrbano;
 import zonas.ZonaUrbana;
 import estacoes.EstacaoTransferencia;
 import estacoes.EstacaoPadrao;
@@ -35,6 +36,9 @@ public class Simulador implements Serializable {
     private boolean pausado = false;
     private transient Random random;
     private Estatisticas estatisticas = new Estatisticas();
+    // Novos atributos para o sistema de distribuição inteligente
+    private MapaUrbano mapaUrbano;
+    private DistribuicaoCaminhoes distribuicaoCaminhoes;
 
     // --- Listas Principais de Entidades ---
     private Lista<CaminhaoPequeno> todosOsCaminhoesPequenos;
@@ -56,6 +60,9 @@ public class Simulador implements Serializable {
         this.listaZonas = new Lista<>();
         this.listaEstacoes = new Lista<>();
         this.random = new Random();
+        // Inicializa o mapa urbano
+        this.mapaUrbano = new MapaUrbano();
+        // A inicialização de distribuicaoCaminhoes será feita quando tivermos as zonas
     }
 
     // --- Setters para Configuração ---
@@ -83,7 +90,14 @@ public class Simulador implements Serializable {
         }
     }
 
-    public void setListaZonas(Lista<ZonaUrbana> lista) { this.listaZonas = lista; }
+    public void setListaZonas(Lista<ZonaUrbana> lista) {
+        this.listaZonas = lista;
+
+        // Inicializa o distribuidor de caminhões quando as zonas são definidas
+        if (this.mapaUrbano != null && this.listaZonas != null && !this.listaZonas.estaVazia()) {
+            this.distribuicaoCaminhoes = new DistribuicaoCaminhoes(this.mapaUrbano, this.listaZonas);
+        }
+    }
     public void setListaEstacoes(Lista<EstacaoTransferencia> lista) { this.listaEstacoes = lista; }
 
     public void setToleranciaCaminhoesGrandes(int tolerancia) {
@@ -169,30 +183,7 @@ public class Simulador implements Serializable {
         System.out.println("Simulação iniciada. Atualização a cada " + INTERVALO_TIMER_MS + "ms.");
     }
 
-    private void distribuirCaminhoesOciososParaColeta() {
-        if (listaZonas == null || listaZonas.estaVazia()) {
-            // System.err.println("AVISO: Não há zonas para distribuir caminhões ociosos."); // Log opcional
-            return;
-        }
-        int distribuidos = 0;
-        if (todosOsCaminhoesPequenos == null) return;
 
-        for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
-            CaminhaoPequeno caminhao = todosOsCaminhoesPequenos.obter(i);
-            // Só distribui se estiver OCIOSO. Se estiver INATIVO_LIMITE_VIAGENS,
-            // reiniciarViagensDiariasTodosCaminhoesPequenos() já o tornou OCIOSO se for o caso.
-            if (caminhao.getStatus() == StatusCaminhao.OCIOSO) {
-                int idxZona = random.nextInt(listaZonas.tamanho());
-                ZonaUrbana zonaDestino = listaZonas.obter(idxZona);
-                caminhao.definirDestino(zonaDestino);
-                caminhao.setStatus(StatusCaminhao.COLETANDO);
-                distribuidos++;
-            }
-        }
-        if (distribuidos > 0) {
-            System.out.println(distribuidos + " caminhões pequenos ociosos enviados para coleta.");
-        }
-    }
 
     public void pausar() {
         if (timer == null) { System.out.println("Simulação não iniciada."); return; }
@@ -217,7 +208,38 @@ public class Simulador implements Serializable {
         } catch (IOException e) { System.err.println("Erro ao salvar relatório final: " + e.getMessage()); }
         System.out.println("Simulação encerrada.");
     }
+    private void distribuirCaminhoesOciososParaColeta() {
+        if (listaZonas == null || listaZonas.estaVazia()) {
+            // System.err.println("AVISO: Não há zonas para distribuir caminhões ociosos."); // Log opcional
+            return;
+        }
 
+        int distribuidos = 0;
+        if (todosOsCaminhoesPequenos == null) return;
+
+        // Verifica se o distribuidor está inicializado
+        if (distribuicaoCaminhoes == null) {
+            // Se não estiver, usa o método antigo (aleatório)
+            for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                CaminhaoPequeno caminhao = todosOsCaminhoesPequenos.obter(i);
+                if (caminhao.getStatus() == StatusCaminhao.OCIOSO) {
+                    int idxZona = random.nextInt(listaZonas.tamanho());
+                    ZonaUrbana zonaDestino = listaZonas.obter(idxZona);
+                    caminhao.definirDestino(zonaDestino);
+                    caminhao.setStatus(StatusCaminhao.COLETANDO);
+                    distribuidos++;
+                }
+            }
+        } else {
+            // Usa o novo distribuidor inteligente
+            distribuidos = distribuicaoCaminhoes.distribuirCaminhoes(todosOsCaminhoesPequenos, listaZonas);
+        }
+
+        if (distribuidos > 0) {
+            System.out.println(distribuidos + " caminhões pequenos ociosos enviados para coleta " +
+                    (distribuicaoCaminhoes != null ? "usando distribuição inteligente." : "aleatoriamente."));
+        }
+    }
     public void gravar(String caminhoArquivo) throws IOException {
         boolean estavaPausado = this.pausado; pausar();
         System.out.println("Salvando estado da simulação em " + caminhoArquivo + "...");
@@ -283,6 +305,10 @@ public class Simulador implements Serializable {
                         estatisticas.registrarGeracaoLixo(zona.getNome(), geradoNestaHora);
                     }
                 }
+            }
+            // Atualiza o tempo sem coleta para o sistema de distribuição inteligente
+            if (distribuicaoCaminhoes != null) {
+                distribuicaoCaminhoes.incrementarTempoSemColeta(1); // 1 minuto por iteração
             }
         }
 
@@ -354,6 +380,11 @@ public class Simulador implements Serializable {
                 if (lixoColetado > 0) {
                     zona.coletarLixo(lixoColetado);
                     estatisticas.registrarColetaLixo(zona.getNome(), lixoColetado);
+
+                    // Registra a coleta para o sistema de distribuição inteligente
+                    if (distribuicaoCaminhoes != null) {
+                        distribuicaoCaminhoes.registrarColetaEmZona(zona.getNome());
+                    }
                 }
             }
         }
@@ -549,7 +580,14 @@ public class Simulador implements Serializable {
             for (int i = 0; i < listaZonas.tamanho(); i++) {
                 ZonaUrbana zona = listaZonas.obter(i);
                 lixoTotalZonas += zona.getLixoAcumulado();
-                System.out.printf("  - %-10s: %6d kg%n", zona.getNome(), zona.getLixoAcumulado());
+
+                // Se temos o sistema de distribuição, mostra o score também
+                if (distribuicaoCaminhoes != null) {
+                    double score = distribuicaoCaminhoes.getScoreZona(zona.getNome());
+                    System.out.printf("  - %-10s: %6d kg (Score: %.2f)%n", zona.getNome(), zona.getLixoAcumulado(), score);
+                } else {
+                    System.out.printf("  - %-10s: %6d kg%n", zona.getNome(), zona.getLixoAcumulado());
+                }
             }
             System.out.printf("  Total nas Zonas: %d kg%n", lixoTotalZonas);
         } else { System.out.println("  (Nenhuma zona configurada)"); }
