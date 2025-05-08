@@ -1,6 +1,3 @@
-// Pacote (se houver)
-// package seu.pacote.aqui;
-
 import Estruturas.Lista;
 import caminhoes.CaminhaoGrande;
 import caminhoes.CaminhaoGrandePadrao;
@@ -8,7 +5,6 @@ import caminhoes.CaminhaoPequeno;
 import caminhoes.CaminhaoPequenoPadrao;
 import estacoes.EstacaoPadrao;
 import estacoes.EstacaoTransferencia;
-// import estacoes.ResultadoProcessamentoFila; // Não usado diretamente aqui, mas pode ser em Simulador
 import zonas.ZonaUrbana;
 
 import javax.swing.*;
@@ -18,7 +14,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-// Imports necessários
 
 /**
  * Interface gráfica para o Simulador de Coleta de Lixo usando Swing
@@ -43,6 +38,12 @@ public class InterfaceSimuladorSwing extends JFrame {
     private JSpinner spinnerEstacaoATempoEspera, spinnerEstacaoBTempoEspera;
     private JSpinner spinnerToleranciaCG;
 
+    // Novos componentes para configuração adicional
+    private JCheckBox checkBoxUsarGaragem;
+    private JCheckBox checkBoxGarantirDistribuicao;
+    private JSpinner spinnerCaminhoesPorZona;
+    private JSpinner spinnerLimiteViagensDiarias;
+
     // Constantes
     private static final int CAPACIDADE_2T = 2000;
     private static final int CAPACIDADE_4T = 4000;
@@ -65,7 +66,7 @@ public class InterfaceSimuladorSwing extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         criarComponentes();
-        organizarLayout(); // Chama o método refatorado
+        organizarLayout();
         configurarEventos();
         redirecionarSaidaPadrao();
         habilitarBotoes(true, false, false, false); // Estado inicial
@@ -108,9 +109,14 @@ public class InterfaceSimuladorSwing extends JFrame {
         spinnerEstacaoATempoEspera = new JSpinner(new SpinnerNumberModel(30, 1, 300, 5));
         spinnerEstacaoBTempoEspera = new JSpinner(new SpinnerNumberModel(30, 1, 300, 5));
         spinnerToleranciaCG = new JSpinner(new SpinnerNumberModel(30, 1, 300, 5));
+
+        // Novos componentes para configuração adicional
+        checkBoxUsarGaragem = new JCheckBox("Usar Garagem Central", true);
+        checkBoxGarantirDistribuicao = new JCheckBox("Garantir Distribuição Mínima", true);
+        spinnerCaminhoesPorZona = new JSpinner(new SpinnerNumberModel(1, 1, 10, 1));
+        spinnerLimiteViagensDiarias = new JSpinner(new SpinnerNumberModel(10, 1, 100, 1));
     }
 
-    // --- MÉTODO organizarLayout() SEM MÉTODOS AUXILIARES ---
     private void organizarLayout() {
         // Painel de botões (topo)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -162,6 +168,13 @@ public class InterfaceSimuladorSwing extends JFrame {
         configFormPanel.add(spinnerCaminhoes10T, gbc);
         y++;
 
+        // Adicionando Linha para Limite de Viagens Diárias
+        gbc.gridx = 0; gbc.gridy = y; gbc.anchor = GridBagConstraints.EAST;
+        configFormPanel.add(new JLabel("Limite de Viagens Diárias:"), gbc);
+        gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        configFormPanel.add(spinnerLimiteViagensDiarias, gbc);
+        y++;
+
         // Adicionando Título Caminhões Grandes
         gbc.gridx = 0; gbc.gridy = y; gbc.gridwidth = 2; gbc.insets = new Insets(8, 5, 2, 5); gbc.anchor = GridBagConstraints.WEST;
         configFormPanel.add(new JLabel("<html><b>--- Frota de Caminhões Grandes ---</b></html>"), gbc);
@@ -180,6 +193,31 @@ public class InterfaceSimuladorSwing extends JFrame {
         configFormPanel.add(new JLabel("Tolerância Espera CG (min):"), gbc);
         gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
         configFormPanel.add(spinnerToleranciaCG, gbc);
+        y++;
+
+        // Adicionando Título Configuração de Distribuição
+        gbc.gridx = 0; gbc.gridy = y; gbc.gridwidth = 2; gbc.insets = new Insets(8, 5, 2, 5); gbc.anchor = GridBagConstraints.WEST;
+        configFormPanel.add(new JLabel("<html><b>--- Configuração de Distribuição ---</b></html>"), gbc);
+        gbc.gridwidth = 1; gbc.insets = new Insets(3, 5, 3, 5); // Reset insets
+        y++;
+
+        // Adiciona Checkbox para usar garagem central
+        gbc.gridx = 0; gbc.gridy = y; gbc.anchor = GridBagConstraints.WEST; gbc.gridwidth = 2;
+        configFormPanel.add(checkBoxUsarGaragem, gbc);
+        gbc.gridwidth = 1;
+        y++;
+
+        // Adiciona Checkbox para garantir distribuição mínima
+        gbc.gridx = 0; gbc.gridy = y; gbc.anchor = GridBagConstraints.WEST; gbc.gridwidth = 2;
+        configFormPanel.add(checkBoxGarantirDistribuicao, gbc);
+        gbc.gridwidth = 1;
+        y++;
+
+        // Adiciona Spinner para mínimo de caminhões por zona
+        gbc.gridx = 0; gbc.gridy = y; gbc.anchor = GridBagConstraints.EAST;
+        configFormPanel.add(new JLabel("Mínimo de Caminhões por Zona:"), gbc);
+        gbc.gridx = 1; gbc.anchor = GridBagConstraints.WEST;
+        configFormPanel.add(spinnerCaminhoesPorZona, gbc);
         y++;
 
         // Adicionando Título Zonas
@@ -305,13 +343,12 @@ public class InterfaceSimuladorSwing extends JFrame {
         add(comandoPanel, BorderLayout.SOUTH);
     }
 
-
     private void configurarEventos() {
         iniciarBtn.addActionListener(e -> {
             try {
                 configurarESetarSimuladorPelaUI();
                 simulador.iniciar();
-                adicionarLog("Simulação iniciada com configurações da UI.\n"); // Adiciona \n aqui se a chamada é direta
+                adicionarLog("Simulação iniciada com configurações da UI.\n");
                 habilitarBotoes(false, true, false, true); // Pausar e Encerrar ativos
                 if (tabPane.getTabCount() > 1) tabPane.setSelectedIndex(1); // Vai para aba de Logs
 
@@ -337,22 +374,17 @@ public class InterfaceSimuladorSwing extends JFrame {
 
         pausarBtn.addActionListener(e -> {
             if (simulador != null) simulador.pausar();
-            // A mensagem de "Simulação pausada" já vem do simulador.println()
-            // adicionarLog("Simulação pausada\n");
             habilitarBotoes(false, false, true, true); // Continuar e Encerrar ativos
         });
 
         continuarBtn.addActionListener(e -> {
             if (simulador != null) simulador.continuarSimulacao();
-            // A mensagem de "Simulação continuada" já vem do simulador.println()
-            // adicionarLog("Simulação continuada\n");
             habilitarBotoes(false, true, false, true); // Pausar e Encerrar ativos
         });
 
         encerrarBtn.addActionListener(e -> {
             if (simulador != null) {
                 simulador.encerrar(); // Encerra a simulação e gera relatório interno
-                // A mensagem de "Simulação encerrada" já vem do simulador.println()
                 atualizarRelatorio(); // Pega o relatório final do simulador
                 if (tabPane.getTabCount() > 3) tabPane.setSelectedIndex(3); // Vai para aba de Relatório Final
             } else {
@@ -360,10 +392,16 @@ public class InterfaceSimuladorSwing extends JFrame {
             }
             habilitarBotoes(true, false, false, false); // Habilita Iniciar, desabilita outros
         });
+
+        // Adiciona eventos para os novos componentes
+        checkBoxUsarGaragem.addActionListener(e -> {
+            boolean usarGaragem = checkBoxUsarGaragem.isSelected();
+            checkBoxGarantirDistribuicao.setEnabled(usarGaragem);
+            spinnerCaminhoesPorZona.setEnabled(usarGaragem);
+        });
     }
 
     private void configurarESetarSimuladorPelaUI() {
-        // As chamadas a adicionarLog() aqui não precisam de \n extra pois System.out já o faz.
         adicionarLog("Configurando simulador com parâmetros da UI...");
         int qtd2T = (Integer) spinnerCaminhoes2T.getValue();
         int qtd4T = (Integer) spinnerCaminhoes4T.getValue();
@@ -371,6 +409,8 @@ public class InterfaceSimuladorSwing extends JFrame {
         int qtd10T = (Integer) spinnerCaminhoes10T.getValue();
         int qtdCG = (Integer) spinnerCaminhoesGrandes.getValue();
         int toleranciaCG = (Integer) spinnerToleranciaCG.getValue();
+        int limiteViagensDiarias = (Integer) spinnerLimiteViagensDiarias.getValue();
+
         int zonaSulMinVal = (Integer) spinnerZonaSulMin.getValue();
         int zonaSulMaxVal = (Integer) spinnerZonaSulMax.getValue();
         if (zonaSulMinVal > zonaSulMaxVal) throw new IllegalArgumentException("Zona Sul: Geração Mínima não pode ser maior que Máxima.");
@@ -388,6 +428,11 @@ public class InterfaceSimuladorSwing extends JFrame {
         if (zonaSudesteMinVal > zonaSudesteMaxVal) throw new IllegalArgumentException("Zona Sudeste: Geração Mínima não pode ser maior que Máxima.");
         int estacaoATempoVal = (Integer) spinnerEstacaoATempoEspera.getValue();
         int estacaoBTempoVal = (Integer) spinnerEstacaoBTempoEspera.getValue();
+
+        // Novas configurações
+        boolean usarGaragem = checkBoxUsarGaragem.isSelected();
+        boolean garantirDistribuicao = checkBoxGarantirDistribuicao.isSelected();
+        int caminhoesPorZona = (Integer) spinnerCaminhoesPorZona.getValue();
 
         Lista<CaminhaoPequeno> listaCaminhoesPequenos = new Lista<>();
         adicionarCaminhoes(listaCaminhoesPequenos, qtd2T, CAPACIDADE_2T);
@@ -413,8 +458,21 @@ public class InterfaceSimuladorSwing extends JFrame {
         simulador.setListaZonas(listaZonas);
         simulador.setListaEstacoes(listaEstacoes);
         simulador.setToleranciaCaminhoesGrandes(toleranciaCG);
-        // simulador.setIntervaloRelatorio(60); // Exemplo, se quiser configurar o intervalo do relatório no console
-        System.out.println("Simulador configurado e pronto para iniciar."); // Esta mensagem irá para o log com \n
+
+        // Configurar as novas opções
+        simulador.setLimiteViagensDiarias(limiteViagensDiarias);
+        simulador.setUsarGaragemCentral(usarGaragem);
+        simulador.setGarantirDistribuicaoMinima(garantirDistribuicao);
+        simulador.setCaminhoesPorZonaMinimo(caminhoesPorZona);
+
+        // Log das configurações
+        adicionarLog("Simulador configurado com: " +
+                "Limite Viagens Diárias=" + limiteViagensDiarias + ", " +
+                "Usar Garagem=" + usarGaragem + ", " +
+                "Garantir Distribuição=" + garantirDistribuicao + ", " +
+                "Mínimo por Zona=" + caminhoesPorZona + "\n");
+
+        System.out.println("Simulador configurado e pronto para iniciar.");
     }
 
     private static void adicionarCaminhoes(Lista<CaminhaoPequeno> lista, int quantidade, int capacidade) {
@@ -439,7 +497,6 @@ public class InterfaceSimuladorSwing extends JFrame {
         String comandoTexto = comandoField.getText().trim().toLowerCase();
         if (comandoTexto.isEmpty()) return;
 
-        // Não adicionamos \n aqui, pois System.out.println já o fará
         System.out.println("> " + comandoTexto);
         comandoField.setText(""); // Limpa o campo
 
@@ -454,6 +511,7 @@ public class InterfaceSimuladorSwing extends JFrame {
                     System.out.println("CGs Frota: " + simulador.getTotalCaminhoesGrandes() +
                             " (Em Uso: " + simulador.getCaminhoesGrandesEmUso() +
                             ", Disp: " + simulador.getCaminhoesGrandesDisponiveis() + ")");
+                    System.out.println("Limite de Viagens Diárias: " + simulador.getLimiteViagensDiarias());
                 } else {
                     System.out.println("Simulador não inicializado.");
                 }
@@ -482,8 +540,23 @@ public class InterfaceSimuladorSwing extends JFrame {
                 } else {
                     System.out.println("Simulador não iniciado. Não é possível adicionar caminhão.");
                 }
-            }
-            else {
+            } else if (comandoTexto.startsWith("setviagens ")) {
+                String valorStr = comandoTexto.substring(10).trim();
+                try {
+                    int novoLimite = Integer.parseInt(valorStr);
+                    if (simulador != null) {
+                        simulador.setLimiteViagensDiarias(novoLimite);
+                        System.out.println("Limite de viagens diárias alterado para " + novoLimite);
+                        // Atualizar o spinner na interface
+                        spinnerLimiteViagensDiarias.setValue(novoLimite);
+                    } else {
+                        System.out.println("Simulador não iniciado. Valor será configurado quando iniciar.");
+                        spinnerLimiteViagensDiarias.setValue(novoLimite);
+                    }
+                } catch (NumberFormatException nfe) {
+                    System.out.println("Valor inválido. Use um número inteiro positivo.");
+                }
+            } else {
                 System.out.println("Comando desconhecido: " + comandoTexto + ". Digite 'ajuda'.");
             }
         } catch (IOException ioe) {
@@ -501,12 +574,12 @@ public class InterfaceSimuladorSwing extends JFrame {
     }
 
     private void mostrarAjuda() {
-        // Usa System.out.println para que as quebras de linha sejam tratadas pelo PrintStream
         System.out.println("\n--- Comandos Disponíveis ---");
         System.out.println("ajuda                - Mostra esta ajuda.");
         System.out.println("status               - Exibe o status atual da simulação.");
         System.out.println("stats / estatisticas - Atualiza e mostra estatísticas na aba correspondente.");
         System.out.println("adicionar grande     - Adiciona um novo caminhão grande à frota.");
+        System.out.println("setviagens <n>       - Altera o limite de viagens diárias para <n>.");
         System.out.println("salvar <arquivo.dat> - Salva o estado atual da simulação.");
         System.out.println("carregar <arquivo.dat> - Carrega um estado salvo da simulação.");
         System.out.println("---------------------------");
@@ -514,8 +587,7 @@ public class InterfaceSimuladorSwing extends JFrame {
 
     public void adicionarLog(String mensagem) {
         SwingUtilities.invokeLater(() -> {
-            logArea.append(mensagem); // MODIFICADO: Removido o + "\n"
-            // A quebra de linha (\n) deve vir da própria mensagem, ex: System.out.println()
+            logArea.append(mensagem);
             logArea.setCaretPosition(logArea.getDocument().getLength()); // Auto-scroll
         });
     }
@@ -540,7 +612,18 @@ public class InterfaceSimuladorSwing extends JFrame {
 
             sb.append("--- Caminhões Pequenos ---\n");
             sb.append(String.format("CPs Atendidos nas Estações: %d\n", stats.getTotalCaminhoesPequenosAtendidosEstacao()));
-            sb.append(String.format("Tempo Médio Espera Fila CPs: %.2f min\n\n", stats.calcularTempoMedioEsperaFilaPequenos()));
+            sb.append(String.format("Tempo Médio Espera Fila CPs: %.2f min\n", stats.calcularTempoMedioEsperaFilaPequenos()));
+            sb.append(String.format("Limite de Viagens Diárias: %d\n\n", simulador.getLimiteViagensDiarias()));
+
+            // Adicionar informações sobre a garagem central, se disponível
+            if (simulador.isUsarGaragemCentral() && simulador.getGaragemCentral() != null) {
+                sb.append("--- Garagem Central ---\n");
+                sb.append(String.format("Caminhões Estacionados: %d\n",
+                        simulador.getGaragemCentral().getCaminhoesEstacionados()));
+                sb.append(String.format("Distribuição Mínima: %s (Min por Zona: %d)\n\n",
+                        simulador.isGarantirDistribuicaoMinima() ? "Sim" : "Não",
+                        simulador.getCaminhoesPorZonaMinimo()));
+            }
 
             SwingUtilities.invokeLater(() -> estatisticasArea.setText(sb.toString()));
         } else {
@@ -573,14 +656,11 @@ public class InterfaceSimuladorSwing extends JFrame {
         OutputStream os = new OutputStream() {
             @Override
             public void write(int b) throws IOException {
-                // Redireciona para o JTextArea
-                // Esta chamada individual de caractere não deve adicionar \n por si só.
                 adicionarLog(String.valueOf((char) b));
             }
 
             @Override
             public void write(byte[] b, int off, int len) throws IOException {
-                // A string 's' aqui já contém \n se originou de um println.
                 String s = new String(b, off, len, StandardCharsets.UTF_8);
                 adicionarLog(s);
             }

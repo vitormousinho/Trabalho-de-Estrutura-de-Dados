@@ -20,6 +20,7 @@ public class ScoreZona implements Serializable {
     private int caminhoesPequenosAtivos;
     private int tempoDesdeUltimaColeta;
     private double score;
+    private double scoreFinal; // Novo atributo para o score após aplicar balanceamento
 
     /**
      * Construtor da classe ScoreZona.
@@ -30,6 +31,7 @@ public class ScoreZona implements Serializable {
         this.caminhoesPequenosAtivos = 0;
         this.tempoDesdeUltimaColeta = 0;
         calcularScore();
+        this.scoreFinal = this.score; // Inicializa o scoreFinal igual ao score bruto
     }
 
     /**
@@ -42,6 +44,7 @@ public class ScoreZona implements Serializable {
         double scoreTaxaGeracao = ((zona.getGeracaoMaxima() + zona.getGeracaoMinima()) / 2.0) * PESO_TAXA_GERACAO;
 
         this.score = scoreLixoAcumulado + scoreTempoSemColeta + scoreCaminhoesAtivos + scoreTaxaGeracao;
+        this.scoreFinal = this.score; // Atualiza o scoreFinal (pode ser modificado posteriormente por algoritmos de balanceamento)
     }
 
     /**
@@ -89,11 +92,29 @@ public class ScoreZona implements Serializable {
     }
 
     /**
-     * Retorna o score atual da zona.
-     * @return O score de prioridade calculado.
+     * Define o score final após a aplicação de fatores de balanceamento.
+     * Usado para evitar priorização excessiva de zonas com scores muito altos.
+     * @param scoreFinal O novo valor de score final balanceado.
+     */
+    public void setScoreFinal(double scoreFinal) {
+        this.scoreFinal = scoreFinal;
+    }
+
+    /**
+     * Retorna o score bruto calculado sem ajustes de balanceamento.
+     * @return O score de prioridade original calculado.
      */
     public double getScore() {
         return score;
+    }
+
+    /**
+     * Retorna o score final após aplicar fatores de balanceamento.
+     * Usado na distribuição para evitar concentração excessiva de caminhões.
+     * @return O score final balanceado.
+     */
+    public double getScoreFinal() {
+        return scoreFinal;
     }
 
     /**
@@ -122,8 +143,8 @@ public class ScoreZona implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("ScoreZona[%s, Lixo=%d, CPs=%d, Tempo=%d, Score=%.2f]",
+        return String.format("ScoreZona[%s, Lixo=%d, CPs=%d, Tempo=%d, Score=%.2f, ScoreFinal=%.2f]",
                 zona.getNome(), zona.getLixoAcumulado(), caminhoesPequenosAtivos,
-                tempoDesdeUltimaColeta, score);
+                tempoDesdeUltimaColeta, score, scoreFinal);
     }
 }

@@ -36,9 +36,17 @@ public class Simulador implements Serializable {
     private boolean pausado = false;
     private transient Random random;
     private Estatisticas estatisticas = new Estatisticas();
-    // Novos atributos para o sistema de distribuição inteligente
+
+    // Atributos para o sistema de distribuição
     private MapaUrbano mapaUrbano;
     private DistribuicaoCaminhoes distribuicaoCaminhoes;
+
+    // Novos atributos para a garagem central e configurações de distribuição
+    private GaragemCentral garagemCentral;
+    private boolean usarGaragemCentral = true; // Por padrão, usar garagem central
+    private boolean garantirDistribuicaoMinima = true; // Garantir pelo menos um caminhão por zona
+    private int caminhoesPorZonaMinimo = 1; // Mínimo de caminhões por zona
+    private int limiteViagensDiarias = 10; // Limite configurável (usando o padrão da classe CaminhaoPequeno)
 
     // --- Listas Principais de Entidades ---
     private Lista<CaminhaoPequeno> todosOsCaminhoesPequenos;
@@ -60,9 +68,51 @@ public class Simulador implements Serializable {
         this.listaZonas = new Lista<>();
         this.listaEstacoes = new Lista<>();
         this.random = new Random();
+
         // Inicializa o mapa urbano
         this.mapaUrbano = new MapaUrbano();
-        // A inicialização de distribuicaoCaminhoes será feita quando tivermos as zonas
+
+        // Inicializa configurações da distribuição
+        this.usarGaragemCentral = true;
+        this.garantirDistribuicaoMinima = true;
+        this.caminhoesPorZonaMinimo = 1;
+        this.limiteViagensDiarias = 10; // Valor padrão, agora configurável
+    }
+
+    // --- Método para inicializar a garagem central ---
+    public void inicializarGaragemCentral() {
+        if (this.mapaUrbano == null) {
+            this.mapaUrbano = new MapaUrbano();
+        }
+        this.garagemCentral = new GaragemCentral("Garagem Central", this.mapaUrbano);
+
+        // Configura o distribuidor
+        if (this.distribuicaoCaminhoes != null) {
+            this.garagemCentral.setDistribuidor(this.distribuicaoCaminhoes);
+
+            if (this.garantirDistribuicaoMinima) {
+                this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(true);
+                this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
+            }
+        }
+
+        // Define o limite de viagens diárias
+        this.garagemCentral.setLimiteViagensDiarias(this.limiteViagensDiarias);
+
+        // Transfere caminhões ociosos para a garagem
+        if (todosOsCaminhoesPequenos != null) {
+            for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                CaminhaoPequeno cp = todosOsCaminhoesPequenos.obter(i);
+                if (cp.getStatus() == StatusCaminhao.OCIOSO) {
+                    garagemCentral.adicionarCaminhao(cp);
+                }
+            }
+        }
+
+        System.out.println("Garagem Central inicializada. Configurações: " +
+                "Garantir distribuição mínima=" + garantirDistribuicaoMinima +
+                ", Mínimo por zona=" + caminhoesPorZonaMinimo +
+                ", Limite viagens=" + limiteViagensDiarias);
     }
 
     // --- Setters para Configuração ---
@@ -76,6 +126,7 @@ public class Simulador implements Serializable {
                     cp.setStatus(StatusCaminhao.OCIOSO);
                 }
                 cp.setTempoChegadaNaFila(-1); // Reseta informação de fila
+                cp.setLimiteViagensDiarias(this.limiteViagensDiarias); // Define o limite configurado
             }
         }
     }
@@ -96,9 +147,18 @@ public class Simulador implements Serializable {
         // Inicializa o distribuidor de caminhões quando as zonas são definidas
         if (this.mapaUrbano != null && this.listaZonas != null && !this.listaZonas.estaVazia()) {
             this.distribuicaoCaminhoes = new DistribuicaoCaminhoes(this.mapaUrbano, this.listaZonas);
+
+            // Configura o distribuidor com as novas configurações
+            if (this.distribuicaoCaminhoes != null) {
+                this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(this.garantirDistribuicaoMinima);
+                this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
+            }
         }
     }
-    public void setListaEstacoes(Lista<EstacaoTransferencia> lista) { this.listaEstacoes = lista; }
+
+    public void setListaEstacoes(Lista<EstacaoTransferencia> lista) {
+        this.listaEstacoes = lista;
+    }
 
     public void setToleranciaCaminhoesGrandes(int tolerancia) {
         if (tolerancia < 1) {
@@ -130,6 +190,51 @@ public class Simulador implements Serializable {
         this.intervaloEstatisticas = intervalo;
     }
 
+    // --- Setters para as novas configurações ---
+    public void setUsarGaragemCentral(boolean usarGaragemCentral) {
+        this.usarGaragemCentral = usarGaragemCentral;
+    }
+
+    public void setGarantirDistribuicaoMinima(boolean garantirDistribuicaoMinima) {
+        this.garantirDistribuicaoMinima = garantirDistribuicaoMinima;
+
+        // Atualiza a configuração no distribuidor, se existir
+        if (distribuicaoCaminhoes != null) {
+            distribuicaoCaminhoes.setGarantirDistribuicaoMinima(garantirDistribuicaoMinima);
+        }
+    }
+
+    public void setCaminhoesPorZonaMinimo(int caminhoesPorZonaMinimo) {
+        if (caminhoesPorZonaMinimo < 1) {
+            throw new IllegalArgumentException("O número mínimo de caminhões por zona deve ser pelo menos 1");
+        }
+        this.caminhoesPorZonaMinimo = caminhoesPorZonaMinimo;
+
+        // Atualiza a configuração no distribuidor, se existir
+        if (distribuicaoCaminhoes != null) {
+            distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(caminhoesPorZonaMinimo);
+        }
+    }
+
+    public void setLimiteViagensDiarias(int limiteViagensDiarias) {
+        if (limiteViagensDiarias < 1) {
+            throw new IllegalArgumentException("O limite de viagens diárias deve ser pelo menos 1");
+        }
+        this.limiteViagensDiarias = limiteViagensDiarias;
+
+        // Atualiza o limite na garagem central, se existir
+        if (garagemCentral != null) {
+            garagemCentral.setLimiteViagensDiarias(limiteViagensDiarias);
+        }
+
+        // Atualiza também todos os caminhões, caso a garagem não exista ou não esteja em uso
+        if (!usarGaragemCentral && todosOsCaminhoesPequenos != null) {
+            for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                todosOsCaminhoesPequenos.obter(i).setLimiteViagensDiarias(limiteViagensDiarias);
+            }
+        }
+    }
+
     // --- Controle da Simulação ---
     public void iniciar() {
         if (timer != null) {
@@ -152,6 +257,11 @@ public class Simulador implements Serializable {
         estatisticas.resetar();
         // totalCaminhoesGrandesCriados já foi setado por setListaCaminhoesGrandes
         estatisticas.registrarTotalInicialCaminhoesGrandes(this.totalCaminhoesGrandesCriados);
+
+        // Inicializa garagem central se estiver habilitada e não existir ainda
+        if (this.usarGaragemCentral && this.garagemCentral == null) {
+            inicializarGaragemCentral();
+        }
 
         reiniciarViagensDiariasTodosCaminhoesPequenos(); // Garante que todos comecem o dia com viagens zeradas
         distribuirCaminhoesOciososParaColeta(); // Distribui os que estão ociosos
@@ -183,8 +293,6 @@ public class Simulador implements Serializable {
         System.out.println("Simulação iniciada. Atualização a cada " + INTERVALO_TIMER_MS + "ms.");
     }
 
-
-
     public void pausar() {
         if (timer == null) { System.out.println("Simulação não iniciada."); return; }
         if (!pausado) { System.out.println("Simulação pausada."); pausado = true; }
@@ -208,18 +316,24 @@ public class Simulador implements Serializable {
         } catch (IOException e) { System.err.println("Erro ao salvar relatório final: " + e.getMessage()); }
         System.out.println("Simulação encerrada.");
     }
+
     private void distribuirCaminhoesOciososParaColeta() {
         if (listaZonas == null || listaZonas.estaVazia()) {
-            // System.err.println("AVISO: Não há zonas para distribuir caminhões ociosos."); // Log opcional
             return;
         }
 
         int distribuidos = 0;
-        if (todosOsCaminhoesPequenos == null) return;
 
-        // Verifica se o distribuidor está inicializado
-        if (distribuicaoCaminhoes == null) {
-            // Se não estiver, usa o método antigo (aleatório)
+        // Usa a garagem central se estiver configurada
+        if (usarGaragemCentral && garagemCentral != null) {
+            distribuidos = garagemCentral.distribuirCaminhoesParaZonas(listaZonas, distribuicaoCaminhoes);
+        }
+        // Caso contrário, usa o código antigo
+        else if (distribuicaoCaminhoes != null) {
+            // O código existente para usar o distribuidor
+            distribuidos = distribuicaoCaminhoes.distribuirCaminhoes(todosOsCaminhoesPequenos, listaZonas);
+        } else {
+            // Código existente de distribuição aleatória
             for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
                 CaminhaoPequeno caminhao = todosOsCaminhoesPequenos.obter(i);
                 if (caminhao.getStatus() == StatusCaminhao.OCIOSO) {
@@ -230,16 +344,15 @@ public class Simulador implements Serializable {
                     distribuidos++;
                 }
             }
-        } else {
-            // Usa o novo distribuidor inteligente
-            distribuidos = distribuicaoCaminhoes.distribuirCaminhoes(todosOsCaminhoesPequenos, listaZonas);
         }
 
         if (distribuidos > 0) {
-            System.out.println(distribuidos + " caminhões pequenos ociosos enviados para coleta " +
-                    (distribuicaoCaminhoes != null ? "usando distribuição inteligente." : "aleatoriamente."));
+            String metodo = usarGaragemCentral ? "garagem central" :
+                    (distribuicaoCaminhoes != null ? "distribuição inteligente" : "distribuição aleatória");
+            System.out.println(distribuidos + " caminhões pequenos ociosos enviados para coleta usando " + metodo);
         }
     }
+
     public void gravar(String caminhoArquivo) throws IOException {
         boolean estavaPausado = this.pausado; pausar();
         System.out.println("Salvando estado da simulação em " + caminhoArquivo + "...");
@@ -322,10 +435,15 @@ public class Simulador implements Serializable {
     }
 
     private void reiniciarViagensDiariasTodosCaminhoesPequenos() {
-        // System.out.println("INFO: Reiniciando contadores de viagens diárias de TODOS os caminhões pequenos.");
-        if (todosOsCaminhoesPequenos == null) return;
-        for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
-            todosOsCaminhoesPequenos.obter(i).reiniciarViagensDiarias();
+        // Se estiver usando garagem central, delega a ela
+        if (usarGaragemCentral && garagemCentral != null) {
+            garagemCentral.reiniciarViagensDiarias();
+        }
+        // Caso contrário, usa o código original
+        else if (todosOsCaminhoesPequenos != null) {
+            for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                todosOsCaminhoesPequenos.obter(i).reiniciarViagensDiarias();
+            }
         }
     }
 
@@ -487,6 +605,15 @@ public class Simulador implements Serializable {
                     if (caminhaoProcessado.getStatus() == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
                         System.out.println("INFO SIM: CP " + caminhaoProcessado.getPlaca() + " descarregou, mas já está INATIVO_LIMITE_VIAGENS.");
                         // Não precisa mudar status, ele já está inativo.
+
+                        // Se estiver usando garagem central, pode recolher o caminhão inativo
+                        if (usarGaragemCentral && garagemCentral != null) {
+                            if (zonaDeRetornoOriginal != null) {
+                                garagemCentral.retornarCaminhaoDeZona(caminhaoProcessado, zonaDeRetornoOriginal);
+                                System.out.println("INFO SIM: CP INATIVO " + caminhaoProcessado.getPlaca() +
+                                        " retornou para a garagem central após descarregar na estação.");
+                            }
+                        }
                     } else if (zonaDeRetornoOriginal != null) {
                         caminhaoProcessado.setStatus(StatusCaminhao.RETORNANDO_ZONA);
                         caminhaoProcessado.definirDestino(zonaDeRetornoOriginal); // Define zonaAtual para retorno
@@ -604,6 +731,16 @@ public class Simulador implements Serializable {
                 } else { System.out.printf("  - Est. %-10s: (Tipo não padrão)%n", listaEstacoes.obter(i).getNome());}
             }
         } else { System.out.println("  (Nenhuma estação configurada)");}
+
+        // Adiciona informação da garagem central, se disponível
+        if (usarGaragemCentral && garagemCentral != null) {
+            System.out.println("------------------------------------------------------------------------");
+            System.out.println("GARAGEM CENTRAL:");
+            System.out.printf("  - Garagem %s: %d caminhões estacionados | Limite viagens: %d%n",
+                    garagemCentral.getNome(), garagemCentral.getCaminhoesEstacionados(),
+                    garagemCentral.getLimiteViagensDiariasPadrao());
+        }
+
         System.out.println("========================================================================\n");
     }
 
@@ -616,14 +753,13 @@ public class Simulador implements Serializable {
     public Lista<CaminhaoPequeno> getTodosOsCaminhoesPequenos() { return todosOsCaminhoesPequenos; }
     public int getCaminhoesGrandesEmUso() { return caminhoesGrandesEmUso; }
     public int getCaminhoesGrandesDisponiveis() { return listaCaminhoesGrandesDisponiveis != null ? listaCaminhoesGrandesDisponiveis.tamanho() : 0; }
-
-    // GETTERS que estavam faltando e causando erro na InterfaceSimuladorSwing
-    public int getTotalCaminhoesGrandes() {
-        return totalCaminhoesGrandesCriados; // Retorna o total de CGs que fazem parte da frota
-    }
-    public int getToleranciaCaminhoesGrandes() {
-        return toleranciaCaminhoesGrandes;
-    }
+    public int getTotalCaminhoesGrandes() { return totalCaminhoesGrandesCriados; }
+    public int getToleranciaCaminhoesGrandes() { return toleranciaCaminhoesGrandes; }
+    public boolean isUsarGaragemCentral() { return usarGaragemCentral; }
+    public boolean isGarantirDistribuicaoMinima() { return garantirDistribuicaoMinima; }
+    public int getCaminhoesPorZonaMinimo() { return caminhoesPorZonaMinimo; }
+    public int getLimiteViagensDiarias() { return limiteViagensDiarias; }
+    public GaragemCentral getGaragemCentral() { return garagemCentral; }
 
     private String formatarTempo(int minutosTotais) {
         int dias = minutosTotais / MINUTOS_EM_UM_DIA;
