@@ -2,35 +2,35 @@
 ========== RELATÓRIO FINAL DE ESTATÍSTICAS ==========
 
 --- MÉTRICAS GERAIS DE LIXO ---
-Lixo Total Gerado:            17.979 kg
-Lixo Total Coletado (CP):     10.072 kg (56,02% do gerado)
-Lixo Total Transportado(CG):     2.000 kg
-Lixo Não Coletado (Zonas):     7.907 kg
+Lixo Total Gerado:            20.772 kg
+Lixo Total Coletado (CP):     12.852 kg (61,87% do gerado)
+Lixo Total Transportado(CG):     6.000 kg
+Lixo Não Coletado (Zonas):     7.920 kg
 
 --------------------------------------------------------
 --- MÉTRICAS DE CAMINHÕES GRANDES (CG) ---
-Frota Inicial:            2
+Frota Inicial:            1
 Adicionados Durante Sim.: 0
-Frota Final Total:        2
+Frota Final Total:        1
 Máximo em Uso Simultâneo: 1
-Viagens para Aterro:      1
+Viagens para Aterro:      2
 
 --------------------------------------------------------
 --- MÉTRICAS DE CAMINHÕES PEQUENOS (CP) ---
-Total Atendidos Estações: 1
+Total Atendidos Estações: 2
 Tempo Médio Espera Fila:  1,00 minutos
 
 --------------------------------------------------------
 --- MÉTRICAS POR ZONA ---
-  - Sul       : Gerado:   3.243 kg | Coletado:   3.243 kg (100,00%)
-  - Norte     : Gerado:   3.501 kg | Coletado:   3.501 kg (100,00%)
-  - Centro    : Gerado:   4.589 kg | Coletado:       0 kg (0,00%)
-  - Leste     : Gerado:   3.318 kg | Coletado:       0 kg (0,00%)
-  - Sudeste   : Gerado:   3.328 kg | Coletado:   3.328 kg (100,00%)
+  - Sul       : Gerado:   3.987 kg | Coletado:   3.987 kg (100,00%)
+  - Norte     : Gerado:   4.788 kg | Coletado:   4.788 kg (100,00%)
+  - Centro    : Gerado:   3.803 kg | Coletado:       0 kg (0,00%)
+  - Leste     : Gerado:   4.117 kg | Coletado:       0 kg (0,00%)
+  - Sudeste   : Gerado:   4.077 kg | Coletado:   4.077 kg (100,00%)
 
 --------------------------------------------------------
 --- MÉTRICAS POR ESTAÇÃO ---
-  - Estação A : CP Recebidos:     1 | CP Descarregados:     1 | T. Médio Espera Fila: 1,00 min
+  - Estação A : CP Recebidos:     2 | CP Descarregados:     2 | T. Médio Espera Fila: 1,00 min
 
 --------------------------------------------------------
 --- CONCLUSÃO ESTIMADA ---

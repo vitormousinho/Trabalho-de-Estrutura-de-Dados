@@ -2,6 +2,9 @@ import java.io.*;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Random;
+import java.nio.file.Files; // Adicionado para operações de arquivo/diretório
+import java.nio.file.Paths;  // Adicionado para operações de arquivo/diretório
+import java.nio.file.Path;   // Adicionado para operações de arquivo/diretório
 
 import Estruturas.Lista;
 import caminhoes.CaminhaoPequeno;
@@ -310,12 +313,49 @@ public class Simulador implements Serializable {
         if (timer != null) { timer.cancel(); timer = null; }
         pausado = true;
         try {
-            String nomeArquivo = "relatorio_simulacao_" + System.currentTimeMillis() + ".txt";
+            // Definir o diretório e o nome do arquivo
+            String diretorioRelatorios = "Relatorios";
+            String nomeBaseArquivo = "relatorio_simulacao_" + System.currentTimeMillis() + ".txt";
+            Path caminhoDiretorio = Paths.get(diretorioRelatorios);
+            Path caminhoArquivo = Paths.get(diretorioRelatorios, nomeBaseArquivo);
+            String nomeArquivoFinal = caminhoArquivo.toString();
+
+            // Criar o diretório se não existir
+            if (!Files.exists(caminhoDiretorio)) {
+                try {
+                    Files.createDirectories(caminhoDiretorio);
+                    System.out.println("Diretório '" + diretorioRelatorios + "' criado com sucesso.");
+                } catch (IOException e) {
+                    System.err.println("Falha ao criar o diretório '" + diretorioRelatorios + "': " + e.getMessage());
+                    System.err.println("O relatório será salvo no diretório atual da aplicação.");
+                    nomeArquivoFinal = nomeBaseArquivo; // Fallback para o diretório atual
+                } catch (SecurityException se) {
+                    System.err.println("Erro de segurança ao tentar criar o diretório '" + diretorioRelatorios + "': " + se.getMessage());
+                    System.err.println("O relatório será salvo no diretório atual da aplicação.");
+                    nomeArquivoFinal = nomeBaseArquivo; // Fallback para o diretório atual
+                }
+            }
+
             System.out.println("\n" + estatisticas.gerarRelatorio()); // Imprime no console (que é a JTextArea)
-            estatisticas.salvarRelatorio(nomeArquivo); // Salva em arquivo
-        } catch (IOException e) { System.err.println("Erro ao salvar relatório final: " + e.getMessage()); }
+            estatisticas.salvarRelatorio(nomeArquivoFinal); // Salva em arquivo no diretório
+
+        } catch (IOException e) {
+            System.err.println("Erro ao salvar relatório final: " + e.getMessage());
+        } catch (SecurityException se) { // Captura SecurityException aqui também, caso ocorra no salvarRelatorio.
+            System.err.println("Erro de segurança ao salvar relatório: " + se.getMessage());
+            // Opcional: fallback para salvar no diretório atual em caso de erro de segurança ao salvar
+            try {
+                String nomeBaseArquivoFallback = "relatorio_simulacao_" + System.currentTimeMillis() + ".txt";
+                System.out.println("\n" + estatisticas.gerarRelatorio());
+                estatisticas.salvarRelatorio(nomeBaseArquivoFallback);
+                System.out.println("Relatório salvo no diretório atual após falha de segurança.");
+            } catch (IOException ioe) {
+                System.err.println("Erro ao salvar relatório no diretório atual após falha de segurança: " + ioe.getMessage());
+            }
+        }
         System.out.println("Simulação encerrada.");
     }
+
 
     private void distribuirCaminhoesOciososParaColeta() {
         if (listaZonas == null || listaZonas.estaVazia()) {

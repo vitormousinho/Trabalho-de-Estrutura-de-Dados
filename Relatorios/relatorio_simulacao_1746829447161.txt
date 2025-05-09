@@ -2,35 +2,35 @@
 ========== RELATÓRIO FINAL DE ESTATÍSTICAS ==========
 
 --- MÉTRICAS GERAIS DE LIXO ---
-Lixo Total Gerado:            13.920 kg
-Lixo Total Coletado (CP):     13.920 kg (100,00% do gerado)
-Lixo Total Transportado(CG):     4.000 kg
-Lixo Não Coletado (Zonas):         0 kg
+Lixo Total Gerado:             7.034 kg
+Lixo Total Coletado (CP):      4.424 kg (62,89% do gerado)
+Lixo Total Transportado(CG):         0 kg
+Lixo Não Coletado (Zonas):     2.610 kg
 
 --------------------------------------------------------
 --- MÉTRICAS DE CAMINHÕES GRANDES (CG) ---
 Frota Inicial:            1
 Adicionados Durante Sim.: 0
 Frota Final Total:        1
-Máximo em Uso Simultâneo: 1
-Viagens para Aterro:      2
+Máximo em Uso Simultâneo: 0
+Viagens para Aterro:      0
 
 --------------------------------------------------------
 --- MÉTRICAS DE CAMINHÕES PEQUENOS (CP) ---
-Total Atendidos Estações: 3
-Tempo Médio Espera Fila:  1,00 minutos
+Total Atendidos Estações: 0
+Tempo Médio Espera Fila:  0,00 minutos
 
 --------------------------------------------------------
 --- MÉTRICAS POR ZONA ---
-  - Sul       : Gerado:   3.030 kg | Coletado:   3.030 kg (100,00%)
-  - Norte     : Gerado:   2.711 kg | Coletado:   2.711 kg (100,00%)
-  - Centro    : Gerado:   2.429 kg | Coletado:   2.429 kg (100,00%)
-  - Leste     : Gerado:   3.115 kg | Coletado:   3.115 kg (100,00%)
-  - Sudeste   : Gerado:   2.635 kg | Coletado:   2.635 kg (100,00%)
+  - Sul       : Gerado:   1.334 kg | Coletado:   1.334 kg (100,00%)
+  - Norte     : Gerado:   1.477 kg | Coletado:   1.477 kg (100,00%)
+  - Centro    : Gerado:   1.613 kg | Coletado:   1.613 kg (100,00%)
+  - Leste     : Gerado:   1.053 kg | Coletado:       0 kg (0,00%)
+  - Sudeste   : Gerado:   1.557 kg | Coletado:       0 kg (0,00%)
 
 --------------------------------------------------------
 --- MÉTRICAS POR ESTAÇÃO ---
-  - Estação A : CP Recebidos:     3 | CP Descarregados:     3 | T. Médio Espera Fila: 1,00 min
+(Nenhuma estação processada)
 
 --------------------------------------------------------
 --- CONCLUSÃO ESTIMADA ---

@@ -1,0 +1,20 @@
+# Pasta de Relatórios da Simulação
+ColetaLixo-main/Relatorios/
+
+# Arquivos de compilação Java
+*.class
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários de IDEs
+.idea/
+*.iml
+nbproject/
+.vscode/
+target/
+build/
+
+# Arquivos de configuração de sistema operacional
+.DS_Store
+Thumbs.db
