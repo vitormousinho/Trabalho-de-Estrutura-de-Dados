@@ -1,0 +1,149 @@
+/* Arquivo: styles.css (opcional, coloque no mesmo pacote que o FXML) */
+/* Estilos de exemplo para os itens da lista de caminhões */
+.caminhao-item {
+    -fx-padding: 8px 5px; /* Aumenta o padding vertical */
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1px 0; /* Apenas borda inferior */
+    -fx-background-color: white; /* Fundo branco para cada item */
+}
+
+.caminhao-item:hover {
+    -fx-background-color: #f5f5f5; /* Leve destaque ao passar o mouse */
+}
+
+.status-icon {
+    /* A cor é definida dinamicamente no controller */
+    -fx-stroke: #555555;
+    -fx-stroke-width: 0.5px; /* Borda mais fina */
+}
+
+.caminhao-placa {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px; /* Tamanho da fonte da placa */
+    -fx-text-fill: #2c3e50;
+}
+
+.caminhao-carga-texto {
+    -fx-font-size: 12px; /* Tamanho da fonte da carga */
+    -fx-text-fill: #333333;
+    -fx-min-width: 80px; /* Garante espaço para o texto da carga */
+    -fx-alignment: center-left;
+}
+.caminhao-local{
+    -fx-font-size: 11px; /* Tamanho da fonte do local */
+    -fx-text-fill: #555555;
+}
+.caminhao-status-texto{
+    -fx-font-size: 11px; /* Tamanho da fonte do status */
+    -fx-text-fill: #777777;
+    -fx-font-style: italic;
+}
+
+/* Estilo para Labels de Título de Seção */
+.section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50; /* Cor escura para títulos */
+    -fx-padding: 5px 0px;
+}
+
+/* Estilo para botões principais */
+.button { /* Estilo geral para botões */
+    -fx-font-size: 12px;
+    -fx-padding: 6px 12px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+}
+
+/* Estilo para labels de métricas */
+.metric-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2980b9; /* Azul para valores de métricas */
+}
+.metric-label {
+    -fx-font-size: 11px; /* Reduzido para caber melhor */
+    -fx-text-fill: #7f8c8d; /* Cinza para labels de métricas */
+    -fx-text-alignment: center;
+    -fx-wrap-text: true;
+}
+
+/* Estilo para status operacional */
+.status-operacional {
+    -fx-background-color: #2ecc71; /* Verde para operacional */
+    -fx-text-fill: white;
+    -fx-padding: 2px 6px; /* Ajuste no padding */
+    -fx-background-radius: 3px;
+    -fx-font-size: 11px;
+}
+
+/* Estilo para ListView */
+.list-view {
+    -fx-border-color: #bdc3c7; /* Borda suave para ListViews */
+    -fx-border-radius: 3px;
+    -fx-font-size: 12px;
+}
+
+.list-cell { /* Estilo geral para células da lista */
+    -fx-padding: 4px 6px;
+}
+
+.list-view .list-cell:odd {
+    -fx-background-color: #f8f9f9;
+}
+.list-view .list-cell:even {
+    -fx-background-color: white;
+}
+.list-view .list-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+}
+
+/* Estilos para Abas */
+.tab-pane .tab-header-area .tab-header-background {
+    -fx-background-color: #e0e0e0; /* Fundo da área de cabeçalho das abas */
+}
+
+.tab-pane .tab {
+    -fx-background-color: #f0f0f0;
+    -fx-padding: 6px 18px; /* Ajuste no padding da aba */
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1px 1px 0 0; /* Borda direita e superior */
+    -fx-background-radius: 5px 5px 0 0; /* Cantos arredondados no topo */
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: white; /* Aba selecionada mais clara */
+    -fx-border-color: #cccccc #cccccc white #cccccc; /* Remove borda inferior da aba selecionada */
+}
+
+.tab-pane .tab:hover {
+    -fx-background-color: #e8e8e8;
+}
+
+.tab .tab-label {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Ajustes gerais para espaçamento e alinhamento */
+.label {
+    -fx-font-size: 12px; /* Tamanho padrão para labels */
+}
+
+.vbox-section { /* Para VBox que representam seções */
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+    -fx-spacing: 8;
+}
+
+.grid-pane { /* Para GridPanes dentro das seções */
+    -fx-hgap: 10;
+    -fx-vgap: 8;
+}
+
+.scroll-pane > .viewport { /* Remove borda padrão do viewport do ScrollPane se necessário */
+    -fx-background-color: transparent;
+}

@@ -47,12 +47,15 @@ public class Estatisticas implements Serializable {
         int caminhoesPequenosRecebidos; // Quantos CPs chegaram à estação
         int caminhoesPequenosDescarregados; // Quantos CPs foram efetivamente descarregados
         long tempoTotalEsperaFila; // Tempo acumulado de espera na fila para esta estação
+        // Adicionar lixo transferido se necessário para getLixoTransferidoPorEstacao
+        // int lixoTransferido;
 
         EntradaEstacao(String nome) {
             this.nomeEstacao = nome;
             this.caminhoesPequenosRecebidos = 0;
             this.caminhoesPequenosDescarregados = 0;
             this.tempoTotalEsperaFila = 0;
+            // this.lixoTransferido = 0;
         }
         @Override public String toString() { return nomeEstacao + "(Rec: " + caminhoesPequenosRecebidos + ", Desc: " + caminhoesPequenosDescarregados + ")"; }
     }
@@ -165,6 +168,9 @@ public class Estatisticas implements Serializable {
         if (quantidadeTransportada <= 0) return;
         lixoTotalTransportado += quantidadeTransportada;
         viagensCaminhoesGrandesAterro++;
+        // Se precisar rastrear lixo transferido por estação, seria aqui,
+        // mas precisaria saber de qual estação o CG partiu.
+        // Se um CG é exclusivo de uma estação enquanto carrega, pode-se inferir.
     }
 
     /** Registra que um novo caminhão grande foi adicionado à frota durante a simulação. */
@@ -209,41 +215,59 @@ public class Estatisticas implements Serializable {
         return Math.max(0, caminhoesMinimos); // Garante que não seja negativo (embora ceil deva cuidar disso)
     }
 
-    // --- Métodos Getters para acesso aos valores das estatísticas ---
-    public int getLixoTotalGerado() {
-        return lixoTotalGerado;
+    // --- Getters para acesso aos valores das estatísticas ---
+    public int getLixoTotalGerado() { return lixoTotalGerado; }
+    public int getLixoTotalColetado() { return lixoTotalColetado; }
+    public int getLixoTotalTransportado() { return lixoTotalTransportado; }
+    public int getTotalInicialCaminhoesGrandes() { return totalInicialCaminhoesGrandes; }
+    public int getCaminhoesGrandesAdicionados() { return caminhoesGrandesAdicionados; }
+    public int getMaxCaminhoesGrandesEmUsoSimultaneo() { return maxCaminhoesGrandesEmUsoSimultaneo; }
+    public int getViagensCaminhoesGrandesAterro() { return viagensCaminhoesGrandesAterro; }
+    public int getTotalCaminhoesPequenosAtendidosEstacao() { return totalCaminhoesPequenosAtendidosEstacao; }
+    public long getTempoTotalEsperaFilaPequenos() { return tempoTotalEsperaFilaPequenos; }
+
+    // --- NOVOS Getters para a UI ---
+    public int getLixoGeradoPorZona(String nomeZona) {
+        for (int i = 0; i < estatisticasZonas.tamanho(); i++) {
+            EntradaZona entrada = estatisticasZonas.obter(i);
+            if (entrada.nomeZona.equals(nomeZona)) {
+                return entrada.lixoGerado;
+            }
+        }
+        return 0; // Retorna 0 se a zona não for encontrada
     }
 
-    public int getLixoTotalColetado() {
-        return lixoTotalColetado;
+    public int getLixoColetadoPorZona(String nomeZona) {
+        for (int i = 0; i < estatisticasZonas.tamanho(); i++) {
+            EntradaZona entrada = estatisticasZonas.obter(i);
+            if (entrada.nomeZona.equals(nomeZona)) {
+                return entrada.lixoColetado;
+            }
+        }
+        return 0; // Retorna 0 se a zona não for encontrada
     }
 
-    public int getLixoTotalTransportado() {
-        return lixoTotalTransportado;
+    public double getTempoMedioEsperaPorEstacao(String nomeEstacao) {
+        for (int i = 0; i < estatisticasEstacoes.tamanho(); i++) {
+            EntradaEstacao entrada = estatisticasEstacoes.obter(i);
+            if (entrada.nomeEstacao.equals(nomeEstacao)) {
+                if (entrada.caminhoesPequenosDescarregados == 0) return 0.0;
+                return (double) entrada.tempoTotalEsperaFila / entrada.caminhoesPequenosDescarregados;
+            }
+        }
+        return 0.0; // Retorna 0.0 se a estação não for encontrada
     }
 
-    public int getTotalInicialCaminhoesGrandes() {
-        return totalInicialCaminhoesGrandes;
-    }
-
-    public int getCaminhoesGrandesAdicionados() {
-        return caminhoesGrandesAdicionados;
-    }
-
-    public int getMaxCaminhoesGrandesEmUsoSimultaneo() {
-        return maxCaminhoesGrandesEmUsoSimultaneo;
-    }
-
-    public int getViagensCaminhoesGrandesAterro() {
-        return viagensCaminhoesGrandesAterro;
-    }
-
-    public int getTotalCaminhoesPequenosAtendidosEstacao() {
-        return totalCaminhoesPequenosAtendidosEstacao;
-    }
-
-    public long getTempoTotalEsperaFilaPequenos() {
-        return tempoTotalEsperaFilaPequenos;
+    public int getLixoTransferidoPorEstacao(String nomeEstacao) {
+        // Esta métrica não está sendo explicitamente rastreada por estação.
+        // O lixoTotalTransportado é geral. Para ter por estação,
+        // precisaríamos saber de qual estação cada CG partiu ao registrar o transporte.
+        // Por agora, retornaremos 0 ou um valor placeholder.
+        // Se a lógica do simulador garante que um CG está associado a uma estação
+        // enquanto carrega, você poderia somar a carga dos CGs que partiram daquela estação.
+        // Para este exemplo, vamos retornar 0, indicando que precisa de implementação.
+        return 0; // Placeholder - Implementação necessária se este dado for crucial.
+        // Uma forma seria modificar registrarTransporteLixo para incluir a estação de origem do CG.
     }
 
 

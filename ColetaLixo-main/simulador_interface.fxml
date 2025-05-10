@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="SimuladorController">
+    <top>
+        <VBox BorderPane.alignment="CENTER">
+            <children>
+                <HBox alignment="CENTER" prefHeight="40.0" spacing="10.0" style="-fx-background-color: #333; -fx-padding: 10;">
+                    <children>
+                        <Label text="Simulador de Coleta de Lixo - Teresina" textFill="white">
+                            <font>
+                                <Font name="System Bold" size="18.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+                <HBox alignment="CENTER" prefHeight="30.0" style="-fx-background-color: #444; -fx-padding: 5;">
+                    <children>
+                        <Label text="Gestão de Resíduos Sólidos e Sustentabilidade Ambiental" textFill="lightgray">
+                            <font>
+                                <Font size="14.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+                <HBox alignment="CENTER" prefHeight="60.0" spacing="10.0" style="-fx-padding: 10; -fx-background-color: #f0f0f0;">
+                    <children>
+                        <Button fx:id="btnIniciar" mnemonicParsing="false" onAction="#handleIniciarSimulacao" style="-fx-background-color: #4CAF50; -fx-text-fill: white;" text="Iniciar">
+                            <font><Font name="System Bold" size="13.0" /></font></Button>
+                        <Button fx:id="btnPausar" mnemonicParsing="false" onAction="#handlePausarSimulacao" text="Pausar" />
+                        <Button fx:id="btnContinuar" mnemonicParsing="false" onAction="#handleContinuarSimulacao" text="Continuar" />
+                        <Button fx:id="btnEncerrar" mnemonicParsing="false" onAction="#handleEncerrarSimulacao" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Encerrar" />
+                        <HBox HBox.hgrow="ALWAYS" />
+                        <Button fx:id="btnAdicionarCaminhaoGrande" mnemonicParsing="false" onAction="#handleAdicionarCaminhaoGrande" style="-fx-background-color: #2196F3; -fx-text-fill: white;" text="Adicionar Caminhão Grande" />
+                        <Button fx:id="btnGerarRelatorio" mnemonicParsing="false" onAction="#handleGerarRelatorio" text="Gerar Relatório" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </top>
+    <center>
+        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+            <tabs>
+                <Tab text="Simulação Principal">
+                    <content>
+                        <HBox spacing="15.0" style="-fx-padding: 15;">
+                            <children>
+                                <VBox spacing="15.0" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <VBox style="-fx-border-color: #cccccc; -fx-border-width: 1; -fx-padding: 10;" spacing="8.0">
+                                            <children>
+                                                <Label text="Zonas de Coleta" styleClass="section-title">
+                                                    <font><Font name="System Bold" size="16.0" /></font>
+                                                </Label>
+                                                <GridPane hgap="10.0" vgap="8.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                    </columnConstraints>
+                                                    <rowConstraints>
+                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                    </rowConstraints>
+                                                    <children>
+                                                        <VBox spacing="2.0">
+                                                            <children><Label fx:id="lblZonaSulNome" text="Sul" style="-fx-font-weight: bold;"/><Label fx:id="lblZonaSulLixoGerado" text="Gerado: -- kg" /><Label fx:id="lblZonaSulLixoColetado" text="Coletado: -- kg" /></children>
+                                                        </VBox>
+                                                        <VBox spacing="2.0" GridPane.columnIndex="1">
+                                                            <children><Label fx:id="lblZonaNorteNome" text="Norte" style="-fx-font-weight: bold;" /><Label fx:id="lblZonaNorteLixoGerado" text="Gerado: -- kg" /><Label fx:id="lblZonaNorteLixoColetado" text="Coletado: -- kg" /></children>
+                                                        </VBox>
+                                                        <VBox spacing="2.0" GridPane.rowIndex="1">
+                                                            <children><Label fx:id="lblZonaCentroNome" text="Centro" style="-fx-font-weight: bold;" /><Label fx:id="lblZonaCentroLixoGerado" text="Gerado: -- kg" /><Label fx:id="lblZonaCentroLixoColetado" text="Coletado: -- kg" /></children>
+                                                        </VBox>
+                                                        <VBox spacing="2.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                                            <children><Label fx:id="lblZonaLesteNome" text="Leste" style="-fx-font-weight: bold;" /><Label fx:id="lblZonaLesteLixoGerado" text="Gerado: -- kg" /><Label fx:id="lblZonaLesteLixoColetado" text="Coletado: -- kg" /></children>
+                                                        </VBox>
+                                                        <VBox spacing="2.0" GridPane.rowIndex="2">
+                                                            <children><Label fx:id="lblZonaSudesteNome" text="Sudeste" style="-fx-font-weight: bold;" /><Label fx:id="lblZonaSudesteLixoGerado" text="Gerado: -- kg" /><Label fx:id="lblZonaSudesteLixoColetado" text="Coletado: -- kg" /></children>
+                                                        </VBox>
+                                                    </children>
+                                                </GridPane>
+                                                <HBox alignment="CENTER" style="-fx-background-color: #555; -fx-padding: 5;">
+                                                    <children><Label fx:id="lblTempoSimulado" text="00:00 (Simulado)" textFill="white"><font><Font name="System Bold" size="13.0" /></font></Label></children>
+                                                </HBox>
+                                            </children>
+                                        </VBox>
+
+                                        <VBox style="-fx-border-color: #cccccc; -fx-border-width: 1; -fx-padding: 10;" spacing="5.0">
+                                            <children>
+                                                <Label text="Métricas Gerais" styleClass="section-title">
+                                                    <font><Font name="System Bold" size="16.0" /></font>
+                                                </Label>
+                                                <GridPane hgap="10.0" vgap="5.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                                    </columnConstraints>
+                                                    <rowConstraints>
+                                                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                                    </rowConstraints>
+                                                    <children>
+                                                        <VBox alignment="CENTER"><Label fx:id="lblMetricaLixoTotal" text="0" styleClass="metric-value" /><Label text="Lixo Total (kg)" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.columnIndex="1"><Label fx:id="lblMetricaLixoColetado" text="0" styleClass="metric-value" /><Label text="Lixo Coletado (kg)" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.columnIndex="2"><Label fx:id="lblMetricaLixoTransportado" text="0" styleClass="metric-value" /><Label text="Lixo Transportado (kg)" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.columnIndex="3" GridPane.rowIndex="0"><Label fx:id="lblMetricaPequenosTotal" text="0" styleClass="metric-value" /><Label text="Pequenos Total" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.rowIndex="1"><Label fx:id="lblMetricaPequenosEmAtividade" text="0" styleClass="metric-value" /><Label text="Em Atividade" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.columnIndex="1" GridPane.rowIndex="1"><Label fx:id="lblMetricaGrandesTotal" text="0" styleClass="metric-value" /><Label text="Grandes Total" styleClass="metric-label" /></VBox>
+                                                        <VBox alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="1"><Label fx:id="lblMetricaGrandesEmUso" text="0" styleClass="metric-value" /><Label text="Grandes Em Uso" styleClass="metric-label" /></VBox>
+                                                    </children>
+                                                </GridPane>
+                                            </children>
+                                        </VBox>
+
+                                        <HBox spacing="15.0">
+                                            <children>
+                                                <VBox style="-fx-border-color: #cccccc; -fx-border-width: 1; -fx-padding: 10;" spacing="5.0" HBox.hgrow="ALWAYS">
+                                                    <children>
+                                                        <HBox alignment="CENTER_LEFT" spacing="5.0"><Label fx:id="lblEstacaoANome" text="Estação A"><font><Font name="System Bold" size="14.0" /></font></Label><Label fx:id="lblEstacaoAStatus" styleClass="status-operacional" text="Operacional" /></HBox>
+                                                        <GridPane hgap="8.0">
+                                                            <columnConstraints>
+                                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="70.0"/> <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/> <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="90.0"/> </columnConstraints>
+                                                            <rowConstraints>
+                                                                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                                            </rowConstraints>
+                                                            <children>
+                                                                <VBox alignment="CENTER"><Label fx:id="lblEstacaoACaminhoesFila" text="0" /><Label text="Caminhões na Fila" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                                <VBox alignment="CENTER" GridPane.columnIndex="1"><Label fx:id="lblEstacaoATempoEsperaMedio" text="0 min" /><Label text="Tempo de Espera Médio" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                                <VBox alignment="CENTER" GridPane.columnIndex="2"><Label fx:id="lblEstacaoALixoTransferido" text="0 kg" /><Label text="Lixo Transferido" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                            </children>
+                                                        </GridPane>
+                                                        <Label text="Fila de Caminhões:" style="-fx-font-weight: bold;" />
+                                                        <Label fx:id="lblEstacaoACaminhaoGrandeInfo" text="Sem CG" />
+                                                        <ListView fx:id="listViewEstacaoAFilaCP" prefHeight="80.0" />
+                                                    </children>
+                                                </VBox>
+                                                <VBox style="-fx-border-color: #cccccc; -fx-border-width: 1; -fx-padding: 10;" spacing="5.0" HBox.hgrow="ALWAYS">
+                                                    <children>
+                                                        <HBox alignment="CENTER_LEFT" spacing="5.0"><Label fx:id="lblEstacaoBNome" text="Estação B"><font><Font name="System Bold" size="14.0" /></font></Label><Label fx:id="lblEstacaoBStatus" styleClass="status-operacional" text="Operacional" /></HBox>
+                                                        <GridPane hgap="8.0">
+                                                            <columnConstraints>
+                                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="70.0"/>
+                                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
+                                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="90.0"/>
+                                                            </columnConstraints>
+                                                            <rowConstraints>
+                                                                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                                            </rowConstraints>
+                                                            <children>
+                                                                <VBox alignment="CENTER"><Label fx:id="lblEstacaoBCaminhoesFila" text="0" /><Label text="Caminhões na Fila" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                                <VBox alignment="CENTER" GridPane.columnIndex="1"><Label fx:id="lblEstacaoBTempoEsperaMedio" text="0 min" /><Label text="Tempo de Espera Médio" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                                <VBox alignment="CENTER" GridPane.columnIndex="2"><Label fx:id="lblEstacaoBLixoTransferido" text="0 kg" /><Label text="Lixo Transferido" textAlignment="CENTER" wrapText="true"/></VBox>
+                                                            </children>
+                                                        </GridPane>
+                                                        <Label text="Fila de Caminhões:" style="-fx-font-weight: bold;" />
+                                                        <Label fx:id="lblEstacaoBCaminhaoGrandeInfo" text="Sem CG" />
+                                                        <ListView fx:id="listViewEstacaoBFilaCP" prefHeight="80.0" />
+                                                    </children>
+                                                </VBox>
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+
+                                <VBox prefWidth="380.0" spacing="10.0" style="-fx-border-color: #cccccc; -fx-border-width: 1; -fx-padding: 10;">
+                                    <children>
+                                        <Label text="Caminhões em Atividade" styleClass="section-title">
+                                            <font><Font name="System Bold" size="16.0" /></font>
+                                        </Label>
+                                        <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                                            <content>
+                                                <VBox fx:id="vboxCaminhoesEmAtividade" spacing="8.0" />
+                                            </content>
+                                        </ScrollPane>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </HBox>
+                    </content>
+                </Tab>
+                <Tab text="Configurações">
+                    <content>
+                        <ScrollPane fitToWidth="true">
+                            <content>
+                                <VBox spacing="15.0" style="-fx-padding: 20;">
+                                    <Label text="Configurações da Simulação" styleClass="section-title" />
+                                    <Label text="Esta aba será implementada para permitir a configuração detalhada do simulador, similar à versão Swing." />
+                                    <Label text="Incluirá spinners para número de caminhões, capacidades, geração de lixo por zona, tolerâncias, etc." />
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </content>
+                </Tab>
+                <Tab text="Logs da Simulação">
+                    <content>
+                        <ScrollPane fitToWidth="true" fitToHeight="true">
+                            <content>
+                                <TextArea fx:id="areaLog" editable="false" wrapText="true" prefHeight="600.0" />
+                            </content>
+                        </ScrollPane>
+                    </content>
+                </Tab>
+                <Tab text="Relatório Final">
+                    <content>
+                        <ScrollPane fitToWidth="true" fitToHeight="true">
+                            <content>
+                                <TextArea fx:id="areaRelatorioFinal" editable="false" wrapText="true" prefHeight="600.0" />
+                            </content>
+                        </ScrollPane>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+</BorderPane>
