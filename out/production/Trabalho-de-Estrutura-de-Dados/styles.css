@@ -1,5 +1,4 @@
-/* Arquivo: styles.css (opcional, coloque no mesmo pacote que o FXML) */
-/* Estilos de exemplo para os itens da lista de caminhões */
+/* Estilos para os itens da lista de caminhões */
 .caminhao-item {
     -fx-padding: 8px 5px; /* Aumenta o padding vertical */
     -fx-border-color: #e0e0e0;
@@ -29,11 +28,11 @@
     -fx-min-width: 80px; /* Garante espaço para o texto da carga */
     -fx-alignment: center-left;
 }
-.caminhao-local{
+.caminhao-local {
     -fx-font-size: 11px; /* Tamanho da fonte do local */
     -fx-text-fill: #555555;
 }
-.caminhao-status-texto{
+.caminhao-status-texto {
     -fx-font-size: 11px; /* Tamanho da fonte do status */
     -fx-text-fill: #777777;
     -fx-font-style: italic;
@@ -146,4 +145,90 @@
 
 .scroll-pane > .viewport { /* Remove borda padrão do viewport do ScrollPane se necessário */
     -fx-background-color: transparent;
+}
+/* Adicione estas regras ao seu arquivo styles.css */
+
+/* Estilos para os botões na aba de configuração */
+.button-primary {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.button-primary:hover {
+    -fx-background-color: #1976D2;
+}
+
+.button-primary:pressed {
+    -fx-background-color: #0D47A1;
+}
+
+/* Estilos para TitledPane */
+.titled-pane {
+    -fx-text-fill: #2c3e50;
+    -fx-font-weight: bold;
+}
+
+.titled-pane > .title {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #ddd;
+    -fx-padding: 5px 10px;
+}
+
+.titled-pane:expanded > .title {
+    -fx-background-color: #e0e0e0;
+}
+
+.titled-pane > .content {
+    -fx-background-color: #fcfcfc;
+    -fx-border-color: #ddd;
+    -fx-padding: 15px;
+}
+
+/* Estilos para Spinner */
+.spinner {
+    -fx-background-color: white;
+    -fx-border-color: #ccc;
+    -fx-border-radius: 3px;
+}
+
+.spinner .increment-arrow-button, .spinner .decrement-arrow-button {
+    -fx-background-color: #f0f0f0;
+    -fx-border-color: #ccc;
+}
+
+.spinner .increment-arrow-button:hover, .spinner .decrement-arrow-button:hover {
+    -fx-background-color: #e0e0e0;
+}
+
+.spinner .text-field {
+    -fx-background-color: white;
+    -fx-border-width: 0;
+}
+
+/* Estilos para CheckBox */
+.check-box {
+    -fx-font-size: 13px;
+}
+
+.check-box .box {
+    -fx-background-color: white;
+    -fx-border-color: #ccc;
+    -fx-border-radius: 3px;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: white;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #2196F3;
+}
+
+/* Estilo para GridPane na aba de configuração */
+.grid-pane {
+    -fx-hgap: 10;
+    -fx-vgap: 10;
+    -fx-padding: 5;
 }

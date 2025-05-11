@@ -1,6 +1,3 @@
-// Arquivo: SimuladorController.java
-// Pacote: (defina seu pacote, ex: com.meuprojeto.simulador)
-
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -8,15 +5,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -28,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Optional;
 
 import caminhoes.CaminhaoGrande;
 import caminhoes.CaminhaoPequeno;
@@ -38,7 +28,6 @@ import estacoes.EstacaoTransferencia;
 import zonas.ZonaUrbana;
 import Estruturas.Lista;
 import caminhoes.StatusCaminhao;
-
 
 public class SimuladorController {
 
@@ -95,6 +84,31 @@ public class SimuladorController {
     @FXML private TextArea areaLog;
     @FXML private TextArea areaRelatorioFinal;
 
+    // --- Componentes de Configuração ---
+    @FXML private Spinner<Integer> spinnerCaminhoes2T;
+    @FXML private Spinner<Integer> spinnerCaminhoes4T;
+    @FXML private Spinner<Integer> spinnerCaminhoes8T;
+    @FXML private Spinner<Integer> spinnerCaminhoes10T;
+    @FXML private Spinner<Integer> spinnerCaminhoesGrandes;
+    @FXML private Spinner<Integer> spinnerZonaSulMin;
+    @FXML private Spinner<Integer> spinnerZonaSulMax;
+    @FXML private Spinner<Integer> spinnerZonaNorteMin;
+    @FXML private Spinner<Integer> spinnerZonaNorteMax;
+    @FXML private Spinner<Integer> spinnerZonaCentroMin;
+    @FXML private Spinner<Integer> spinnerZonaCentroMax;
+    @FXML private Spinner<Integer> spinnerZonaLesteMin;
+    @FXML private Spinner<Integer> spinnerZonaLesteMax;
+    @FXML private Spinner<Integer> spinnerZonaSudesteMin;
+    @FXML private Spinner<Integer> spinnerZonaSudesteMax;
+    @FXML private Spinner<Integer> spinnerEstacaoATempoEspera;
+    @FXML private Spinner<Integer> spinnerEstacaoBTempoEspera;
+    @FXML private Spinner<Integer> spinnerToleranciaCG;
+    @FXML private Spinner<Integer> spinnerLimiteViagensDiarias;
+    @FXML private Spinner<Integer> spinnerCaminhoesPorZona;
+    @FXML private CheckBox checkBoxUsarGaragem;
+    @FXML private CheckBox checkBoxGarantirDistribuicao;
+    @FXML private Button btnAplicarConfig;
+
     // --- Interface funcional customizada para três argumentos ---
     @FunctionalInterface
     public interface TriConsumerCustom<T, U, V> {
@@ -107,7 +121,6 @@ public class SimuladorController {
         void accept(A a, B b, C c, D d, E e, F f);
     }
 
-
     public void setSimulador(Simulador simulador) {
         this.simulador = simulador;
     }
@@ -118,22 +131,39 @@ public class SimuladorController {
 
     @FXML
     public void initialize() {
+        // Inicializar componentes da UI
         btnPausar.setDisable(true);
         btnContinuar.setDisable(true);
         btnEncerrar.setDisable(true);
+
+        // Configurar placeholders
         listViewEstacaoAFilaCP.setPlaceholder(new Label("Fila vazia"));
         listViewEstacaoBFilaCP.setPlaceholder(new Label("Fila vazia"));
+
+        // Configurar nomes das zonas
         if (lblZonaSulNome != null) lblZonaSulNome.setText("Sul");
         if (lblZonaNorteNome != null) lblZonaNorteNome.setText("Norte");
         if (lblZonaCentroNome != null) lblZonaCentroNome.setText("Centro");
         if (lblZonaLesteNome != null) lblZonaLesteNome.setText("Leste");
         if (lblZonaSudesteNome != null) lblZonaSudesteNome.setText("Sudeste");
+
+        // Configurar nomes das estações
         if (lblEstacaoANome != null) lblEstacaoANome.setText("Estação A");
         if (lblEstacaoBNome != null) lblEstacaoBNome.setText("Estação B");
+
+        // Inicializar labels
         atualizarLabelsZonas(null, null, null, null, null);
         atualizarLabelsMetricasGerais();
         atualizarLabelsEstacoes(null, null);
         lblTempoSimulado.setText("00:00 (Simulado)");
+
+        // Configurar spinners (se existirem)
+        configurarSpinners();
+
+        // Configurar checkboxes (se existirem)
+        configurarCheckBoxes();
+
+        // Configurar timer de atualização
         atualizacaoUITimer = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             if (simulador != null && !simulador.isPausado()) {
                 atualizarInterfaceCompleta();
@@ -142,40 +172,178 @@ public class SimuladorController {
         atualizacaoUITimer.setCycleCount(Timeline.INDEFINITE);
     }
 
+    private void configurarSpinners() {
+        // Verificar se os spinners existem e configurá-los
+        if (spinnerCaminhoes2T != null) {
+            spinnerCaminhoes2T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 2));
+        }
+        if (spinnerCaminhoes4T != null) {
+            spinnerCaminhoes4T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        }
+        if (spinnerCaminhoes8T != null) {
+            spinnerCaminhoes8T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        }
+        if (spinnerCaminhoes10T != null) {
+            spinnerCaminhoes10T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        }
+        if (spinnerCaminhoesGrandes != null) {
+            spinnerCaminhoesGrandes.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 50, 1));
+        }
+
+        // Spinners para zonas
+        if (spinnerZonaSulMin != null) {
+            spinnerZonaSulMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        }
+        if (spinnerZonaSulMax != null) {
+            spinnerZonaSulMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        }
+        if (spinnerZonaNorteMin != null) {
+            spinnerZonaNorteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        }
+        if (spinnerZonaNorteMax != null) {
+            spinnerZonaNorteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        }
+        if (spinnerZonaCentroMin != null) {
+            spinnerZonaCentroMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        }
+        if (spinnerZonaCentroMax != null) {
+            spinnerZonaCentroMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        }
+        if (spinnerZonaLesteMin != null) {
+            spinnerZonaLesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        }
+        if (spinnerZonaLesteMax != null) {
+            spinnerZonaLesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        }
+        if (spinnerZonaSudesteMin != null) {
+            spinnerZonaSudesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        }
+        if (spinnerZonaSudesteMax != null) {
+            spinnerZonaSudesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        }
+
+        // Spinners para estações
+        if (spinnerEstacaoATempoEspera != null) {
+            spinnerEstacaoATempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        }
+        if (spinnerEstacaoBTempoEspera != null) {
+            spinnerEstacaoBTempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        }
+
+        // Outros spinners
+        if (spinnerToleranciaCG != null) {
+            spinnerToleranciaCG.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        }
+        if (spinnerLimiteViagensDiarias != null) {
+            spinnerLimiteViagensDiarias.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 10, 1));
+        }
+        if (spinnerCaminhoesPorZona != null) {
+            spinnerCaminhoesPorZona.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 1, 1));
+        }
+    }
+
+    private void configurarCheckBoxes() {
+        // Configurar interdependência dos checkboxes
+        if (checkBoxUsarGaragem != null && checkBoxGarantirDistribuicao != null && spinnerCaminhoesPorZona != null) {
+            checkBoxUsarGaragem.setSelected(true);
+            checkBoxGarantirDistribuicao.setSelected(true);
+
+            // Quando "Usar Garagem Central" é desmarcado, desabilita as opções relacionadas
+            checkBoxUsarGaragem.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                checkBoxGarantirDistribuicao.setDisable(!newVal);
+                spinnerCaminhoesPorZona.setDisable(!newVal);
+            });
+        }
+    }
+
     public void inicializarInterface() {
         adicionarLog("Interface do Simulador inicializada.");
     }
 
     @FXML
     private void handleIniciarSimulacao(ActionEvent event) {
-        if (simulador == null) {
-            simulador = new Simulador();
-            adicionarLog("Simulador (re)criado. Aplique configurações da aba 'Configurações' ou use os padrões.");
-        } else if (simulador.getTempoSimulado() > 0 && !simulador.isPausado()){
-            simulador = new Simulador();
-            adicionarLog("Simulação anterior encerrada. Iniciando uma nova simulação.");
+        try {
+            if (simulador == null) {
+                simulador = new Simulador();
+                adicionarLog("Simulador (re)criado. Aplique configurações da aba 'Configurações' ou use os padrões.");
+            } else if (simulador.getTempoSimulado() > 0 && !simulador.isPausado()){
+                simulador = new Simulador();
+                adicionarLog("Simulação anterior encerrada. Iniciando uma nova simulação.");
+            }
+
+            if (simulador.getListaZonas() == null || simulador.getListaZonas().estaVazia() ||
+                    simulador.getListaEstacoes() == null || simulador.getListaEstacoes().estaVazia() ||
+                    simulador.getTodosOsCaminhoesPequenos() == null || simulador.getTodosOsCaminhoesPequenos().estaVazia()) {
+
+                configurarSimuladorComValoresPadraoExemplo();
+                adicionarLog("Simulador configurado com valores padrão de exemplo.");
+            } else {
+                // Verificar se existem pelo menos 5 caminhões pequenos
+                int totalCaminhoesPequenos = simulador.getTodosOsCaminhoesPequenos().tamanho();
+                if (totalCaminhoesPequenos < 5) {
+                    // Adicionar mais caminhões pequenos para atingir o mínimo de 5
+                    Lista<CaminhaoPequeno> listaCPs = simulador.getTodosOsCaminhoesPequenos();
+                    int caminhoesFaltantes = 5 - totalCaminhoesPequenos;
+
+                    for (int i = 0; i < caminhoesFaltantes; i++) {
+                        // Adicionar caminhões de capacidades variadas
+                        int capacidade = (i % 4 == 0) ? 2000 :
+                                (i % 4 == 1) ? 4000 :
+                                        (i % 4 == 2) ? 8000 : 10000;
+                        listaCPs.adicionar(new CaminhaoPequenoPadrao(capacidade));
+                    }
+                    simulador.setListaCaminhoesPequenos(listaCPs);
+                    adicionarLog("Adicionados " + caminhoesFaltantes +
+                            " caminhões pequenos para atingir o mínimo de 5.");
+                }
+            }
+
+            simulador.iniciar();
+            atualizacaoUITimer.play();
+            btnIniciar.setDisable(true);
+            btnPausar.setDisable(false);
+            btnContinuar.setDisable(true);
+            btnEncerrar.setDisable(false);
+            adicionarLog("Simulação iniciada com " + simulador.getTodosOsCaminhoesPequenos().tamanho() +
+                    " caminhões pequenos.");
+
+            TabPane tabPane = findTabPaneParent(lblTempoSimulado);
+            if (tabPane != null) {
+                tabPane.getSelectionModel().select(0); // Seleciona a primeira aba (Simulação Principal)
+            }
+        } catch (Exception e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erro ao iniciar a simulação");
+            alert.setHeaderText("Erro de Configuração");
+            alert.setContentText(e.getMessage());
+            alert.showAndWait();
+
+            adicionarLog("Falha ao iniciar: " + e.getMessage() + "\n");
+            e.printStackTrace();
         }
-        if (simulador.getListaZonas() == null || simulador.getListaZonas().estaVazia()) {
-            configurarSimuladorComValoresPadraoExemplo();
-            adicionarLog("Simulador configurado com valores padrão de exemplo.");
-        }
-        simulador.iniciar();
-        atualizacaoUITimer.play();
-        btnIniciar.setDisable(true);
-        btnPausar.setDisable(false);
-        btnContinuar.setDisable(true);
-        btnEncerrar.setDisable(false);
-        adicionarLog("Simulação iniciada.");
     }
 
     private void configurarSimuladorComValoresPadraoExemplo() {
+        // Criando lista com 5 caminhões pequenos (requisito mínimo)
         Lista<CaminhaoPequeno> listaCP = new Lista<>();
+        // Caminhões de 2 Toneladas
         listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
+        listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
+        // Caminhões de 4 Toneladas
         listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
+        // Caminhões de 8 Toneladas
+        listaCP.adicionar(new CaminhaoPequenoPadrao(8000));
+        // Caminhões de 10 Toneladas
+        listaCP.adicionar(new CaminhaoPequenoPadrao(10000));
+
         simulador.setListaCaminhoesPequenos(listaCP);
+
+        // Criando um caminhão grande inicial
         Lista<CaminhaoGrande> listaCG = new Lista<>();
         listaCG.adicionar(new CaminhaoGrandePadrao(30));
         simulador.setListaCaminhoesGrandes(listaCG);
+
+        // Configurando as zonas
         Lista<ZonaUrbana> listaZ = new Lista<>();
         String[] nomesZonas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"};
         for (String nome : nomesZonas) {
@@ -184,14 +352,159 @@ public class SimuladorController {
             listaZ.adicionar(z);
         }
         simulador.setListaZonas(listaZ);
+
+        // Configurando as estações
         Lista<EstacaoTransferencia> listaE = new Lista<>();
         listaE.adicionar(new EstacaoPadrao("Estação A", 30));
         listaE.adicionar(new EstacaoPadrao("Estação B", 30));
         simulador.setListaEstacoes(listaE);
+
+        // Configurando outros parâmetros
         simulador.setLimiteViagensDiarias(10);
         simulador.setUsarGaragemCentral(true);
         simulador.setGarantirDistribuicaoMinima(true);
         simulador.setCaminhoesPorZonaMinimo(1);
+
+        adicionarLog("Simulador configurado com: 5 caminhões pequenos (2x2T, 1x4T, 1x8T, 1x10T), 1 caminhão grande, 5 zonas e 2 estações");
+    }
+
+    @FXML
+    private void handleAplicarConfiguracao(ActionEvent event) {
+        try {
+            // Criar nova simulação ou verificar se já existe uma em andamento
+            if (simulador == null) {
+                simulador = new Simulador();
+            } else if (simulador.getTempoSimulado() > 0) {
+                // Se uma simulação já estiver em progresso, pergunte antes de substituir
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Substituir Simulação");
+                alert.setHeaderText("Uma simulação já está em progresso.");
+                alert.setContentText("Deseja substituir a simulação atual por uma nova?");
+
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    simulador = new Simulador();
+                } else {
+                    return; // Usuário cancelou
+                }
+            }
+
+            // Configurar caminhões pequenos
+            Lista<CaminhaoPequeno> listaCP = new Lista<>();
+            int qtd2T = spinnerCaminhoes2T.getValue();
+            int qtd4T = spinnerCaminhoes4T.getValue();
+            int qtd8T = spinnerCaminhoes8T.getValue();
+            int qtd10T = spinnerCaminhoes10T.getValue();
+
+            // Adicionar caminhões por tipo
+            for (int i = 0; i < qtd2T; i++) {
+                listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
+            }
+            for (int i = 0; i < qtd4T; i++) {
+                listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
+            }
+            for (int i = 0; i < qtd8T; i++) {
+                listaCP.adicionar(new CaminhaoPequenoPadrao(8000));
+            }
+            for (int i = 0; i < qtd10T; i++) {
+                listaCP.adicionar(new CaminhaoPequenoPadrao(10000));
+            }
+
+            // Verificar mínimo de 5 caminhões
+            int totalCP = listaCP.tamanho();
+            if (totalCP < 5) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Ajuste Automático");
+                alert.setHeaderText("Número mínimo de caminhões não atingido");
+                alert.setContentText("A simulação requer pelo menos 5 caminhões pequenos. " +
+                        "Serão adicionados " + (5 - totalCP) + " caminhões de 4 toneladas.");
+                alert.showAndWait();
+
+                // Adicionar caminhões extras para atingir o mínimo
+                for (int i = 0; i < 5 - totalCP; i++) {
+                    listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
+                }
+            }
+
+            simulador.setListaCaminhoesPequenos(listaCP);
+
+            // Configurar caminhões grandes
+            Lista<CaminhaoGrande> listaCG = new Lista<>();
+            int qtdCG = spinnerCaminhoesGrandes.getValue();
+            int toleranciaCG = spinnerToleranciaCG.getValue();
+
+            for (int i = 0; i < qtdCG; i++) {
+                listaCG.adicionar(new CaminhaoGrandePadrao(toleranciaCG));
+            }
+
+            simulador.setListaCaminhoesGrandes(listaCG);
+            simulador.setToleranciaCaminhoesGrandes(toleranciaCG);
+
+            // Configurar zonas
+            Lista<ZonaUrbana> listaZ = new Lista<>();
+
+            ZonaUrbana zonaSul = new ZonaUrbana("Sul");
+            zonaSul.setIntervaloGeracao(spinnerZonaSulMin.getValue(), spinnerZonaSulMax.getValue());
+            listaZ.adicionar(zonaSul);
+
+            ZonaUrbana zonaNorte = new ZonaUrbana("Norte");
+            zonaNorte.setIntervaloGeracao(spinnerZonaNorteMin.getValue(), spinnerZonaNorteMax.getValue());
+            listaZ.adicionar(zonaNorte);
+
+            ZonaUrbana zonaCentro = new ZonaUrbana("Centro");
+            zonaCentro.setIntervaloGeracao(spinnerZonaCentroMin.getValue(), spinnerZonaCentroMax.getValue());
+            listaZ.adicionar(zonaCentro);
+
+            ZonaUrbana zonaLeste = new ZonaUrbana("Leste");
+            zonaLeste.setIntervaloGeracao(spinnerZonaLesteMin.getValue(), spinnerZonaLesteMax.getValue());
+            listaZ.adicionar(zonaLeste);
+
+            ZonaUrbana zonaSudeste = new ZonaUrbana("Sudeste");
+            zonaSudeste.setIntervaloGeracao(spinnerZonaSudesteMin.getValue(), spinnerZonaSudesteMax.getValue());
+            listaZ.adicionar(zonaSudeste);
+
+            simulador.setListaZonas(listaZ);
+
+            // Configurar estações
+            Lista<EstacaoTransferencia> listaE = new Lista<>();
+            listaE.adicionar(new EstacaoPadrao("Estação A", spinnerEstacaoATempoEspera.getValue()));
+            listaE.adicionar(new EstacaoPadrao("Estação B", spinnerEstacaoBTempoEspera.getValue()));
+            simulador.setListaEstacoes(listaE);
+
+            // Configurações adicionais
+            simulador.setLimiteViagensDiarias(spinnerLimiteViagensDiarias.getValue());
+            simulador.setUsarGaragemCentral(checkBoxUsarGaragem.isSelected());
+            simulador.setGarantirDistribuicaoMinima(checkBoxGarantirDistribuicao.isSelected());
+            simulador.setCaminhoesPorZonaMinimo(spinnerCaminhoesPorZona.getValue());
+
+            // Iniciar simulação
+            simulador.iniciar();
+            atualizacaoUITimer.play();
+            btnIniciar.setDisable(true);
+            btnPausar.setDisable(false);
+            btnContinuar.setDisable(true);
+            btnEncerrar.setDisable(false);
+
+            // Mudar para a aba de simulação
+            TabPane tabPane = findTabPaneParent(lblTempoSimulado);
+            if (tabPane != null) {
+                tabPane.getSelectionModel().select(0); // Seleciona a primeira aba (Simulação Principal)
+            }
+
+            // Adicionar log
+            adicionarLog("Simulação iniciada com configurações personalizadas: " +
+                    listaCP.tamanho() + " caminhões pequenos, " +
+                    listaCG.tamanho() + " caminhões grandes.");
+
+        } catch (Exception e) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erro de Configuração");
+            alert.setHeaderText("Falha ao aplicar configurações");
+            alert.setContentText("Erro: " + e.getMessage());
+            alert.showAndWait();
+            adicionarLog("Erro ao aplicar configurações: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -304,7 +617,6 @@ public class SimuladorController {
         });
     }
 
-    // A linha 356 original estava aqui. Agora usamos TriConsumerCustom.
     private void atualizarLabelsZonas(ZonaUrbana zonaSul, ZonaUrbana zonaNorte, ZonaUrbana zonaCentro, ZonaUrbana zonaLeste, ZonaUrbana zonaSudeste) {
         Estatisticas stats = simulador != null ? simulador.getEstatisticas() : null;
 
@@ -523,6 +835,7 @@ public class SimuladorController {
     }
 
     private TabPane findTabPaneParent(javafx.scene.Node node) {
+        if (node == null) return null;
         javafx.scene.Parent parent = node.getParent();
         while (parent != null) {
             if (parent instanceof TabPane) {
@@ -534,7 +847,7 @@ public class SimuladorController {
     }
 
     private boolean isParent(javafx.scene.Node potentialParent, javafx.scene.Node potentialChild) {
-        if (potentialChild == null) return false;
+        if (potentialChild == null || potentialParent == null) return false;
         javafx.scene.Parent p = potentialChild.getParent();
         while (p != null) {
             if (p.equals(potentialParent)) {

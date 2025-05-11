@@ -2,14 +2,17 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -203,9 +206,154 @@
                         <ScrollPane fitToWidth="true">
                             <content>
                                 <VBox spacing="15.0" style="-fx-padding: 20;">
-                                    <Label text="Configurações da Simulação" styleClass="section-title" />
-                                    <Label text="Esta aba será implementada para permitir a configuração detalhada do simulador, similar à versão Swing." />
-                                    <Label text="Incluirá spinners para número de caminhões, capacidades, geração de lixo por zona, tolerâncias, etc." />
+                                    <children>
+                                        <Label text="Configuração da Simulação" styleClass="section-title">
+                                            <font>
+                                                <Font name="System Bold" size="16.0" />
+                                            </font>
+                                        </Label>
+
+                                        <TitledPane text="Frota de Caminhões Pequenos" expanded="true">
+                                            <content>
+                                                <GridPane hgap="10" vgap="10">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="180" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="50" prefWidth="100" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <Label text="Caminhões de 2 Ton.:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoes2T" editable="true"
+                                                                 GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+                                                        <Label text="Caminhões de 4 Ton.:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoes4T" editable="true"
+                                                                 GridPane.rowIndex="1" GridPane.columnIndex="1" />
+
+                                                        <Label text="Caminhões de 8 Ton.:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoes8T" editable="true"
+                                                                 GridPane.rowIndex="2" GridPane.columnIndex="1" />
+
+                                                        <Label text="Caminhões de 10 Ton.:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoes10T" editable="true"
+                                                                 GridPane.rowIndex="3" GridPane.columnIndex="1" />
+
+                                                        <Label text="Caminhões de 20 Ton.:" GridPane.rowIndex="4" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoesGrandes" editable="true"
+                                                                 GridPane.rowIndex="4" GridPane.columnIndex="1" />
+
+                                                        <Label text="Limite de Viagens Diárias:" GridPane.rowIndex="5" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerLimiteViagensDiarias" editable="true"
+                                                                 GridPane.rowIndex="5" GridPane.columnIndex="1" />
+
+                                                        <Label text="Tolerância Caminhões Grandes (min):" GridPane.rowIndex="6" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerToleranciaCG" editable="true"
+                                                                 GridPane.rowIndex="6" GridPane.columnIndex="1" />
+                                                    </children>
+                                                </GridPane>
+                                            </content>
+                                        </TitledPane>
+
+                                        <TitledPane text="Configuração das Zonas (Lixo kg/dia)" expanded="true">
+                                            <content>
+                                                <GridPane hgap="10" vgap="10">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="80" prefWidth="120" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="60" prefWidth="80" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="80" prefWidth="120" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="60" prefWidth="80" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <Label text="Zona Sul - Mín:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerZonaSulMin" editable="true"
+                                                                 GridPane.rowIndex="0" GridPane.columnIndex="1" />
+                                                        <Label text="Zona Sul - Máx:" GridPane.rowIndex="0" GridPane.columnIndex="2" />
+                                                        <Spinner fx:id="spinnerZonaSulMax" editable="true"
+                                                                 GridPane.rowIndex="0" GridPane.columnIndex="3" />
+
+                                                        <Label text="Zona Norte - Mín:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerZonaNorteMin" editable="true"
+                                                                 GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                                                        <Label text="Zona Norte - Máx:" GridPane.rowIndex="1" GridPane.columnIndex="2" />
+                                                        <Spinner fx:id="spinnerZonaNorteMax" editable="true"
+                                                                 GridPane.rowIndex="1" GridPane.columnIndex="3" />
+
+                                                        <Label text="Zona Centro - Mín:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerZonaCentroMin" editable="true"
+                                                                 GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                                                        <Label text="Zona Centro - Máx:" GridPane.rowIndex="2" GridPane.columnIndex="2" />
+                                                        <Spinner fx:id="spinnerZonaCentroMax" editable="true"
+                                                                 GridPane.rowIndex="2" GridPane.columnIndex="3" />
+
+                                                        <Label text="Zona Leste - Mín:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerZonaLesteMin" editable="true"
+                                                                 GridPane.rowIndex="3" GridPane.columnIndex="1" />
+                                                        <Label text="Zona Leste - Máx:" GridPane.rowIndex="3" GridPane.columnIndex="2" />
+                                                        <Spinner fx:id="spinnerZonaLesteMax" editable="true"
+                                                                 GridPane.rowIndex="3" GridPane.columnIndex="3" />
+
+                                                        <Label text="Zona Sudeste - Mín:" GridPane.rowIndex="4" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerZonaSudesteMin" editable="true"
+                                                                 GridPane.rowIndex="4" GridPane.columnIndex="1" />
+                                                        <Label text="Zona Sudeste - Máx:" GridPane.rowIndex="4" GridPane.columnIndex="2" />
+                                                        <Spinner fx:id="spinnerZonaSudesteMax" editable="true"
+                                                                 GridPane.rowIndex="4" GridPane.columnIndex="3" />
+                                                    </children>
+                                                </GridPane>
+                                            </content>
+                                        </TitledPane>
+
+                                        <TitledPane text="Configuração das Estações" expanded="true">
+                                            <content>
+                                                <GridPane hgap="10" vgap="10">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="200" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="50" prefWidth="100" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <Label text="Tempo limite Estação A (min):" GridPane.rowIndex="0" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerEstacaoATempoEspera" editable="true"
+                                                                 GridPane.rowIndex="0" GridPane.columnIndex="1" />
+
+                                                        <Label text="Tempo limite Estação B (min):" GridPane.rowIndex="1" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerEstacaoBTempoEspera" editable="true"
+                                                                 GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                                                    </children>
+                                                </GridPane>
+                                            </content>
+                                        </TitledPane>
+
+                                        <TitledPane text="Opções de Distribuição" expanded="true">
+                                            <content>
+                                                <GridPane hgap="10" vgap="10">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="100" prefWidth="200" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="50" prefWidth="100" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <CheckBox fx:id="checkBoxUsarGaragem" text="Usar Garagem Central" selected="true"
+                                                                  GridPane.rowIndex="0" GridPane.columnIndex="0" />
+
+                                                        <CheckBox fx:id="checkBoxGarantirDistribuicao" text="Garantir Distribuição Mínima" selected="true"
+                                                                  GridPane.rowIndex="1" GridPane.columnIndex="0" />
+
+                                                        <Label text="Mínimo de Caminhões por Zona:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+                                                        <Spinner fx:id="spinnerCaminhoesPorZona" editable="true"
+                                                                 GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                                                    </children>
+                                                </GridPane>
+                                            </content>
+                                        </TitledPane>
+
+                                        <Button fx:id="btnAplicarConfig" text="Aplicar Configuração e Iniciar" styleClass="button-primary"
+                                                onAction="#handleAplicarConfiguracao">
+                                            <font>
+                                                <Font size="14.0" />
+                                            </font>
+                                            <padding>
+                                                <Insets bottom="10.0" left="20.0" right="20.0" top="10.0" />
+                                            </padding>
+                                        </Button>
+                                    </children>
                                 </VBox>
                             </content>
                         </ScrollPane>
