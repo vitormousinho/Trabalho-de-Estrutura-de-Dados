@@ -11,9 +11,9 @@ public class ScoreZona implements Serializable {
     private static final long serialVersionUID = 1L;
 
     // Pesos para os diferentes fatores no cálculo do score
-    public static final double PESO_LIXO_ACUMULADO = 2.0;
-    public static final double PESO_TEMPO_SEM_COLETA = 1.5;
-    public static final double PESO_CAMINHOES_ATIVOS = -2.0;
+    public static final double PESO_LIXO_ACUMULADO = 3.0;       // Aumentado (era 2.0)
+    public static final double PESO_TEMPO_SEM_COLETA = 2.0;     // Aumentado (era 1.5)
+    public static final double PESO_CAMINHOES_ATIVOS = -1.5;    // Reduzido (era -2.0)
     public static final double PESO_TAXA_GERACAO = 0.3;
 
     private ZonaUrbana zona;
@@ -38,7 +38,14 @@ public class ScoreZona implements Serializable {
      * Calcula o score de prioridade da zona com base nos fatores definidos.
      */
     public void calcularScore() {
-        double scoreLixoAcumulado = zona.getLixoAcumulado() * PESO_LIXO_ACUMULADO;
+        // Aumentar o peso do lixo acumulado quando há poucos caminhões
+        double pesoLixoAjustado = PESO_LIXO_ACUMULADO;
+        if (caminhoesPequenosAtivos <= 1) {
+            // Dobrar o peso do lixo acumulado quando há poucos caminhões ativos
+            pesoLixoAjustado = PESO_LIXO_ACUMULADO * 2.0;
+        }
+
+        double scoreLixoAcumulado = zona.getLixoAcumulado() * pesoLixoAjustado;
         double scoreTempoSemColeta = tempoDesdeUltimaColeta * PESO_TEMPO_SEM_COLETA;
         double scoreCaminhoesAtivos = caminhoesPequenosAtivos * PESO_CAMINHOES_ATIVOS;
         double scoreTaxaGeracao = ((zona.getGeracaoMaxima() + zona.getGeracaoMinima()) / 2.0) * PESO_TAXA_GERACAO;
