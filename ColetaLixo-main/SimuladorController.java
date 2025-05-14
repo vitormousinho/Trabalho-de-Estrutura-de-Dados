@@ -189,34 +189,8 @@ public class SimuladorController {
         // Carregar o conteúdo da aba de relatório final
         if (tabRelatorioFinal != null) {
             try {
-                // Tente carregar o arquivo diretamente como um InputStream
-                InputStream fxmlStream = null;
-
-                // Primeiro, tente como recurso do ClassLoader
-                fxmlStream = getClass().getClassLoader().getResourceAsStream("RelatorioFinalTab.fxml");
-
-                // Se não encontrou, tente como arquivo no sistema de arquivos
-                if (fxmlStream == null) {
-                    File fxmlFile = new File("RelatorioFinalTab.fxml");
-                    if (fxmlFile.exists()) {
-                        fxmlStream = new FileInputStream(fxmlFile);
-                        adicionarLog("Carregando RelatorioFinalTab.fxml como arquivo local.");
-                    } else {
-                        // Tente outros caminhos possíveis
-                        File fxmlFile2 = new File("./RelatorioFinalTab.fxml");
-                        if (fxmlFile2.exists()) {
-                            fxmlStream = new FileInputStream(fxmlFile2);
-                            adicionarLog("Carregando RelatorioFinalTab.fxml do diretório atual.");
-                        } else {
-                            // Último recurso: procurar no diretório pai
-                            File fxmlFile3 = new File("../RelatorioFinalTab.fxml");
-                            if (fxmlFile3.exists()) {
-                                fxmlStream = new FileInputStream(fxmlFile3);
-                                adicionarLog("Carregando RelatorioFinalTab.fxml do diretório pai.");
-                            }
-                        }
-                    }
-                }
+                // Método simplificado para carregar o FXML como recurso
+                InputStream fxmlStream = getClass().getClassLoader().getResourceAsStream("RelatorioFinalTab.fxml");
 
                 if (fxmlStream != null) {
                     FXMLLoader loader = new FXMLLoader();
@@ -226,9 +200,18 @@ public class SimuladorController {
                     fxmlStream.close();
                     adicionarLog("RelatorioFinalTab.fxml carregado com sucesso.");
                 } else {
-                    throw new IOException("Não foi possível encontrar o arquivo RelatorioFinalTab.fxml em nenhum caminho esperado.");
+                    // Tente um caminho alternativo se o primeiro falhar
+                    File file = new File("ColetaLixo-main/resources/RelatorioFinalTab.fxml");
+                    if (file.exists()) {
+                        FXMLLoader loader = new FXMLLoader(file.toURI().toURL());
+                        loader.setController(this);
+                        Node relatorioNode = loader.load();
+                        tabRelatorioFinal.setContent(relatorioNode);
+                        adicionarLog("RelatorioFinalTab.fxml carregado com sucesso de caminho alternativo.");
+                    } else {
+                        throw new IOException("Não foi possível encontrar o arquivo RelatorioFinalTab.fxml em nenhum caminho esperado.");
+                    }
                 }
-
             } catch (IOException e) {
                 adicionarLog("ERRO: Não foi possível carregar RelatorioFinalTab.fxml: " + e.getMessage());
                 e.printStackTrace();
