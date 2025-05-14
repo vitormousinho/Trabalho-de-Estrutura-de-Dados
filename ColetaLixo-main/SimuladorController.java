@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import javafx.geometry.Insets;
 
 import java.io.File;
 import java.io.IOException;
@@ -177,7 +178,6 @@ public class SimuladorController {
         if (lblEstacaoANome != null) lblEstacaoANome.setText("Estação A");
         if (lblEstacaoBNome != null) lblEstacaoBNome.setText("Estação B");
 
-
         atualizarLabelsZonas(null, null, null, null, null); // Atualiza com dados nulos inicialmente
         atualizarLabelsMetricasGerais();
         atualizarLabelsEstacoes(null, null);
@@ -189,42 +189,59 @@ public class SimuladorController {
         // Carregar o conteúdo da aba de relatório final
         if (tabRelatorioFinal != null) {
             try {
-                // Método simplificado para carregar o FXML como recurso
-                InputStream fxmlStream = getClass().getClassLoader().getResourceAsStream("RelatorioFinalTab.fxml");
+                // Abordagem de último recurso com caminho totalmente explícito
+                String diretorioAtual = System.getProperty("user.dir");
+                System.out.println("Diretório de trabalho atual: " + diretorioAtual);
 
-                if (fxmlStream != null) {
-                    FXMLLoader loader = new FXMLLoader();
-                    loader.setController(this);
-                    Node relatorioNode = loader.load(fxmlStream);
-                    tabRelatorioFinal.setContent(relatorioNode);
-                    fxmlStream.close();
-                    adicionarLog("RelatorioFinalTab.fxml carregado com sucesso.");
-                } else {
-                    // Tente um caminho alternativo se o primeiro falhar
-                    File file = new File("ColetaLixo-main/resources/RelatorioFinalTab.fxml");
-                    if (file.exists()) {
-                        FXMLLoader loader = new FXMLLoader(file.toURI().toURL());
+                // Tenta caminhos em ordem de probabilidade
+                String[] tentativasCaminhos = {
+                        diretorioAtual + "/ColetaLixo-main/resources/RelatorioFinalTab.fxml",
+                        diretorioAtual + "/resources/RelatorioFinalTab.fxml",
+                        diretorioAtual + "/RelatorioFinalTab.fxml",
+                        diretorioAtual + "/ColetaLixo-main/RelatorioFinalTab.fxml",
+                        "./ColetaLixo-main/resources/RelatorioFinalTab.fxml",
+                        "./resources/RelatorioFinalTab.fxml",
+                        "./RelatorioFinalTab.fxml",
+                        "out/production/Trabalho-de-Estrutura-de-Dados/RelatorioFinalTab.fxml",
+                        "out/production/Trabalho-de-Estrutura-de-Dados/resources/RelatorioFinalTab.fxml"
+                };
+
+                boolean carregado = false;
+                for (String caminho : tentativasCaminhos) {
+                    File arquivoFXML = new File(caminho);
+                    System.out.println("Tentando carregar de: " + caminho + " (existe: " + arquivoFXML.exists() + ")");
+
+                    if (arquivoFXML.exists()) {
+                        FXMLLoader loader = new FXMLLoader(arquivoFXML.toURI().toURL());
                         loader.setController(this);
                         Node relatorioNode = loader.load();
                         tabRelatorioFinal.setContent(relatorioNode);
-                        adicionarLog("RelatorioFinalTab.fxml carregado com sucesso de caminho alternativo.");
-                    } else {
-                        throw new IOException("Não foi possível encontrar o arquivo RelatorioFinalTab.fxml em nenhum caminho esperado.");
+                        adicionarLog("RelatorioFinalTab.fxml carregado com sucesso de: " + caminho);
+                        carregado = true;
+                        break;
                     }
                 }
-            } catch (IOException e) {
-                adicionarLog("ERRO: Não foi possível carregar RelatorioFinalTab.fxml: " + e.getMessage());
-                e.printStackTrace();
 
-                // Mostra um alerta para o usuário
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Erro de Carregamento da Interface");
-                alert.setHeaderText("Falha ao carregar a aba de relatório");
-                alert.setContentText("O arquivo RelatorioFinalTab.fxml não pôde ser encontrado. Detalhes: " + e.getMessage());
-                alert.showAndWait();
-            } catch (Exception e_geral) {
-                adicionarLog("ERRO GERAL ao carregar RelatorioFinalTab.fxml: " + e_geral.getMessage());
-                e_geral.printStackTrace();
+                if (!carregado) {
+                    // Se tudo falhar, crie uma interface simples programaticamente
+                    VBox conteudoFallback = new VBox(10);
+                    conteudoFallback.setPadding(new Insets(20));
+                    conteudoFallback.getChildren().add(new Label("Não foi possível carregar o FXML. Usando interface alternativa."));
+
+                    // Adicione componentes básicos programaticamente
+                    tabRelatorioFinal.setContent(conteudoFallback);
+                    adicionarLog("ERRO: Nenhum arquivo FXML encontrado. Usando interface alternativa.");
+
+                    // Mostra um alerta para o usuário
+                    Alert alert = new Alert(Alert.AlertType.WARNING);
+                    alert.setTitle("Interface Alternativa");
+                    alert.setHeaderText("Usando interface simplificada");
+                    alert.setContentText("O arquivo RelatorioFinalTab.fxml não pôde ser encontrado. Uma interface simplificada será usada em seu lugar.");
+                    alert.showAndWait();
+                }
+            } catch (Exception e) {
+                adicionarLog("ERRO ao carregar FXML: " + e.getMessage());
+                e.printStackTrace();
             }
         } else {
             adicionarLog("AVISO: A Tab com fx:id='tabRelatorioFinal' não foi encontrada no FXML principal. A aba de relatório gráfico não será carregada.");
@@ -536,18 +553,16 @@ public class SimuladorController {
     }
 
     @FXML
-    private void handleEncerrarSimulacao(ActionEvent event) { // AGORA ATUALIZA A ABA GRÁFICA
+    private void handleEncerrarSimulacao(ActionEvent event) {
         if (simulador != null) {
-            simulador.encerrar(); // O método encerrar do simulador já gera o relatório textual interno e salva
-            if (atualizacaoUITimer != null) atualizacaoUITimer.stop();
-
+            simulador.encerrar();
             atualizarInterfaceCompleta(); // Atualiza a aba principal uma última vez
-            exibirRelatorioFinalGrafico();  // Popula a aba de relatório gráfico
+            exibirRelatorioFinalGrafico(); // Chame este método aqui!
 
             btnIniciar.setDisable(false);
             btnPausar.setDisable(true);
             btnContinuar.setDisable(true);
-            btnEncerrar.setDisable(true); // Desabilita após encerrar
+            btnEncerrar.setDisable(true);
             adicionarLog("Simulação encerrada. Relatório final disponível na aba 'Relatório Final'.");
         }
     }
@@ -814,78 +829,163 @@ public class SimuladorController {
         return hbox;
     }
 
-    // Método modificado para melhorar a visualização do relatório gráfico
+    /**
+     * Atualiza o relatório final gráfico com os dados da simulação.
+     * Este método preenche os gráficos, tabelas e textos informativos
+     * na aba de relatório final.
+     */
+    /**
+     * Cria e exibe o relatório final programaticamente, sem depender do FXML.
+     * Esta versão cria todos os componentes de UI via código para maior confiabilidade.
+     */
     private void exibirRelatorioFinalGrafico() {
         if (simulador == null || simulador.getEstatisticas() == null) {
             adicionarLog("Simulador ou estatísticas não disponíveis para gerar relatório gráfico.");
-            // Limpar campos do relatório se estiverem preenchidos de simulação anterior
-            if (barChartLixoPorZona != null) barChartLixoPorZona.getData().clear();
-            if (tableViewMetricasEstacao != null) tableViewMetricasEstacao.getItems().clear();
-            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: N/D");
-            // ... limpar outros labels
             return;
         }
 
-        Estatisticas stats = simulador.getEstatisticas();
+        final Estatisticas stats = simulador.getEstatisticas();
+        adicionarLog("Gerando relatório final com " + stats.getLixoTotalGerado() + "kg de lixo gerado.");
+
         Platform.runLater(() -> {
             try {
-                // 1. Popular BarChart Lixo Gerado por Zona
-                if (barChartLixoPorZona != null) {
-                    barChartLixoPorZona.getData().clear();
+                // Criar o layout principal
+                ScrollPane scrollPane = new ScrollPane();
+                scrollPane.setFitToWidth(true);
+                scrollPane.setFitToHeight(true);
 
-                    XYChart.Series<String, Number> seriesLixoGerado = new XYChart.Series<>();
-                    seriesLixoGerado.setName("Lixo Gerado");
+                VBox mainContainer = new VBox(20);
+                mainContainer.setAlignment(Pos.TOP_CENTER);
+                mainContainer.setPadding(new Insets(30));
+                mainContainer.setStyle("-fx-background-color: #f4f6f8;");
 
-                    XYChart.Series<String, Number> seriesLixoColetado = new XYChart.Series<>();
-                    seriesLixoColetado.setName("Lixo Coletado");
+                // Título principal
+                Label titleLabel = new Label("RELATÓRIO FINAL DA SIMULAÇÃO DE COLETA DE LIXO EM TERESINA");
+                titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+                titleLabel.setPadding(new Insets(10, 0, 20, 0));
+                mainContainer.getChildren().add(titleLabel);
 
+                // ---- Seção 1: Gráfico de Lixo por Zona ----
+                VBox chartSection = new VBox(10);
+                chartSection.setAlignment(Pos.CENTER_LEFT);
+                chartSection.setPadding(new Insets(20));
+                chartSection.setStyle("-fx-background-color: white; -fx-border-color: #dfe4ea; " +
+                        "-fx-border-radius: 8px; -fx-background-radius: 8px;");
+
+                Label chartTitle = new Label("Lixo Gerado por Zona");
+                chartTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a237e; " +
+                        "-fx-border-width: 0 0 2px 0; -fx-border-color: #1a237e;");
+
+                // Criar o gráfico
+                CategoryAxis xAxis = new CategoryAxis();
+                xAxis.setLabel("Zonas Urbanas");
+                NumberAxis yAxis = new NumberAxis();
+                yAxis.setLabel("Lixo Gerado (kg)");
+
+                BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
+                barChart.setLegendVisible(true);
+                barChart.setPrefHeight(350);
+
+                // Adicionar dados ao gráfico
+                XYChart.Series<String, Number> seriesLixoGerado = new XYChart.Series<>();
+                seriesLixoGerado.setName("Lixo Gerado");
+
+                XYChart.Series<String, Number> seriesLixoColetado = new XYChart.Series<>();
+                seriesLixoColetado.setName("Lixo Coletado");
+
+                String[] nomesZonasOrdenadas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"};
+
+                if (stats.getEstatisticasZonas() != null && stats.getEstatisticasZonas().tamanho() > 0) {
                     Lista<Estatisticas.EntradaZona> zonasStats = stats.getEstatisticasZonas();
-                    String[] nomesZonasOrdenadas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"}; // Ordem desejada
-
                     for (String nomeZona : nomesZonasOrdenadas) {
                         boolean encontrada = false;
                         for (int i = 0; i < zonasStats.tamanho(); i++) {
                             Estatisticas.EntradaZona zonaStat = zonasStats.obter(i);
                             if (zonaStat.nomeZona.equals(nomeZona)) {
-                                seriesLixoGerado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoGerado));
-                                seriesLixoColetado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoColetado));
+                                seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, zonaStat.lixoGerado));
+                                seriesLixoColetado.getData().add(new XYChart.Data<>(nomeZona, zonaStat.lixoColetado));
                                 encontrada = true;
                                 break;
                             }
                         }
-                        if (!encontrada) { // Adiciona com valor 0 se não houver dados
+                        if (!encontrada) {
                             seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, 0));
                             seriesLixoColetado.getData().add(new XYChart.Data<>(nomeZona, 0));
                         }
                     }
-
-                    barChartLixoPorZona.getData().add(seriesLixoGerado);
-                    barChartLixoPorZona.getData().add(seriesLixoColetado);
-                    barChartLixoPorZona.setLegendVisible(true);
-
-                    // Aplicar estilo às barras
-                    for (XYChart.Series<String, Number> s : barChartLixoPorZona.getData()) {
-                        if (s.getName().equals("Lixo Gerado")) {
-                            for (XYChart.Data<String, Number> d : s.getData()) {
-                                Node n = d.getNode();
-                                if (n != null) {
-                                    n.setStyle("-fx-bar-fill: #3498db;"); // Azul para lixo gerado
-                                }
-                            }
-                        } else if (s.getName().equals("Lixo Coletado")) {
-                            for (XYChart.Data<String, Number> d : s.getData()) {
-                                Node n = d.getNode();
-                                if (n != null) {
-                                    n.setStyle("-fx-bar-fill: #2ecc71;"); // Verde para lixo coletado
-                                }
-                            }
-                        }
+                } else {
+                    for (String nomeZona : nomesZonasOrdenadas) {
+                        seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, 0));
+                        seriesLixoColetado.getData().add(new XYChart.Data<>(nomeZona, 0));
                     }
                 }
 
-                // 2. Popular TableView Métricas por Estação
-                if (tableViewMetricasEstacao != null) {
-                    ObservableList<MetricaEstacaoModel> metricasEstacaoList = FXCollections.observableArrayList();
+                barChart.getData().addAll(seriesLixoGerado, seriesLixoColetado);
+
+                chartSection.getChildren().addAll(chartTitle, barChart);
+                mainContainer.getChildren().add(chartSection);
+
+                // ---- Seção 2: Tabela de Métricas por Estação ----
+                VBox tableSection = new VBox(10);
+                tableSection.setAlignment(Pos.CENTER_LEFT);
+                tableSection.setPadding(new Insets(20));
+                tableSection.setStyle("-fx-background-color: white; -fx-border-color: #dfe4ea; " +
+                        "-fx-border-radius: 8px; -fx-background-radius: 8px;");
+
+                Label tableTitle = new Label("Métricas por Estação");
+                tableTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a237e; " +
+                        "-fx-border-width: 0 0 2px 0; -fx-border-color: #1a237e;");
+
+                // Criar a tabela
+                TableView<MetricaEstacaoModel> tableView = new TableView<>();
+                tableView.setPrefHeight(150);
+
+                TableColumn<MetricaEstacaoModel, String> colEstacaoNome = new TableColumn<>("Estação");
+                colEstacaoNome.setCellValueFactory(new PropertyValueFactory<>("nomeEstacao"));
+                colEstacaoNome.setPrefWidth(150);
+
+                TableColumn<MetricaEstacaoModel, Integer> colCaminhoesAtendidos = new TableColumn<>("Caminhões Atendidos");
+                colCaminhoesAtendidos.setCellValueFactory(new PropertyValueFactory<>("caminhoesAtendidos"));
+                colCaminhoesAtendidos.setPrefWidth(150);
+                colCaminhoesAtendidos.setStyle("-fx-alignment: CENTER;");
+
+                TableColumn<MetricaEstacaoModel, Double> colTempoMedioEspera = new TableColumn<>("Tempo Médio de Espera");
+                colTempoMedioEspera.setCellValueFactory(new PropertyValueFactory<>("tempoMedioEspera"));
+                colTempoMedioEspera.setPrefWidth(180);
+                colTempoMedioEspera.setStyle("-fx-alignment: CENTER;");
+                colTempoMedioEspera.setCellFactory(column -> new TableCell<MetricaEstacaoModel, Double>() {
+                    @Override
+                    protected void updateItem(Double item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                        } else {
+                            setText(String.format(brLocale, "%.1f minutos", item));
+                        }
+                    }
+                });
+
+                TableColumn<MetricaEstacaoModel, Integer> colLixoTransferidoEstacao = new TableColumn<>("Lixo Transferido");
+                colLixoTransferidoEstacao.setCellValueFactory(new PropertyValueFactory<>("lixoTransferido"));
+                colLixoTransferidoEstacao.setPrefWidth(150);
+                colLixoTransferidoEstacao.setStyle("-fx-alignment: CENTER_RIGHT;");
+                colLixoTransferidoEstacao.setCellFactory(column -> new TableCell<MetricaEstacaoModel, Integer>() {
+                    @Override
+                    protected void updateItem(Integer item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                        } else {
+                            setText(String.format(brLocale, "%,d kg", item));
+                        }
+                    }
+                });
+
+                tableView.getColumns().addAll(colEstacaoNome, colCaminhoesAtendidos, colTempoMedioEspera, colLixoTransferidoEstacao);
+
+                // Adicionar dados à tabela
+                ObservableList<MetricaEstacaoModel> metricasEstacaoList = FXCollections.observableArrayList();
+                if (stats.getEstatisticasEstacoes() != null && stats.getEstatisticasEstacoes().tamanho() > 0) {
                     Lista<Estatisticas.EntradaEstacao> estacoesStats = stats.getEstatisticasEstacoes();
                     for (int i = 0; i < estacoesStats.tamanho(); i++) {
                         Estatisticas.EntradaEstacao estStat = estacoesStats.obter(i);
@@ -893,85 +993,98 @@ public class SimuladorController {
                                 estStat.nomeEstacao,
                                 estStat.caminhoesPequenosDescarregados,
                                 stats.getTempoMedioEsperaPorEstacao(estStat.nomeEstacao),
-                                estStat.getLixoTransferidoCG()
+                                stats.getLixoTransferidoPorEstacao(estStat.nomeEstacao)
                         ));
                     }
-                    tableViewMetricasEstacao.setItems(metricasEstacaoList);
+                } else {
+                    metricasEstacaoList.add(new MetricaEstacaoModel("Sem dados", 0, 0.0, 0));
                 }
+                tableView.setItems(metricasEstacaoList);
 
-                // 3. Popular Principais Descobertas
+                tableSection.getChildren().addAll(tableTitle, tableView);
+                mainContainer.getChildren().add(tableSection);
+
+                // ---- Seção 3: Principais Descobertas ----
+                VBox discoverySection = new VBox(15);
+                discoverySection.setPadding(new Insets(20));
+                discoverySection.setStyle("-fx-border-color: #e0e0e0; -fx-padding: 20px; " +
+                        "-fx-border-radius: 5px; -fx-background-radius: 5px; -fx-background-color: #f8f9fa;");
+
+                Label discoveryTitle = new Label("Principais Descobertas");
+                discoveryTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
                 double eficienciaColeta = stats.calcularPercentualLixoColetado();
-                String eficienciaTexto = String.format(brLocale, "O sistema conseguiu coletar %.2f%% do lixo gerado ", eficienciaColeta);
-                if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0) {
-                    eficienciaTexto += "(simulação não gerou/coletou lixo significativamente).";
-                } else if (eficienciaColeta == 100.0) {
-                    eficienciaTexto += "em todas as zonas, demonstrando excelente capacidade de coleta.";
-                } else if (eficienciaColeta >= 80) {
-                    eficienciaTexto += ", indicando uma boa capacidade de coleta.";
-                } else {
-                    eficienciaTexto += ", o que pode indicar necessidade de otimização na frota de caminhões pequenos ou na distribuição.";
-                }
-                if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: " + eficienciaTexto);
-                Estatisticas.EntradaZona zonaMaiorGeracao = null;
-                Estatisticas.EntradaZona zonaMenorGeracao = null;
-                Lista<Estatisticas.EntradaZona> zonasStatsList = stats.getEstatisticasZonas();
 
-                if (zonasStatsList != null && !zonasStatsList.estaVazia()) {
-                    // Inicializa com a primeira zona, se existir
-                    zonaMaiorGeracao = zonasStatsList.obter(0);
-                    zonaMenorGeracao = zonasStatsList.obter(0);
-                    for (int i = 1; i < zonasStatsList.tamanho(); i++) {
-                        Estatisticas.EntradaZona atual = zonasStatsList.obter(i);
-                        if (atual.lixoGerado > zonaMaiorGeracao.lixoGerado) zonaMaiorGeracao = atual;
-                        if (atual.lixoGerado < zonaMenorGeracao.lixoGerado) zonaMenorGeracao = atual;
-                    }
-                }
+                Label lblEficiencia = new Label("Eficiência de Coleta: O sistema conseguiu coletar " +
+                        String.format(brLocale, "%.2f%% do lixo gerado.", eficienciaColeta));
+                lblEficiencia.setStyle("-fx-font-size: 13px; -fx-text-fill: #333333; -fx-line-spacing: 3px;");
+                lblEficiencia.setWrapText(true);
 
-                if (zonaMaiorGeracao != null && zonaMenorGeracao != null && stats.getLixoTotalGerado() > 0) {
-                    double percMaior = ((double) zonaMaiorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
-                    double percMenor = ((double) zonaMenorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
-                    if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText(String.format(brLocale, "Distribuição de Lixo: A zona %s gerou a maior quantidade de lixo (%,d kg, %.1f%% do total), enquanto a zona %s produziu a menor quantidade (%,d kg, %.1f%% do total).",
-                            zonaMaiorGeracao.nomeZona, zonaMaiorGeracao.lixoGerado, percMaior,
-                            zonaMenorGeracao.nomeZona, zonaMenorGeracao.lixoGerado, percMenor));
-                } else {
-                    if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText("Distribuição de Lixo: Dados insuficientes ou lixo não gerado para análise detalhada.");
-                }
+                Label lblDistribuicao = new Label("Distribuição de Lixo: Análise da distribuição do lixo entre as zonas urbanas.");
+                lblDistribuicao.setStyle("-fx-font-size: 13px; -fx-text-fill: #333333; -fx-line-spacing: 3px;");
+                lblDistribuicao.setWrapText(true);
 
-                double tempoMedioGlobalEsperaEstacoes = stats.calcularTempoMedioEsperaFilaPequenos();
-                if (lblGargalosSistema != null) lblGargalosSistema.setText(String.format(brLocale, "Gargalos no Sistema: O tempo médio de espera nas estações (global: %.1f minutos) pode indicar o nível de congestionamento nas estações de transferência.", tempoMedioGlobalEsperaEstacoes));
+                Label lblGargalos = new Label("Gargalos no Sistema: O tempo médio de espera nas estações (" +
+                        String.format(brLocale, "%.1f", stats.calcularTempoMedioEsperaFilaPequenos()) +
+                        " minutos) pode indicar o nível de congestionamento nas estações de transferência.");
+                lblGargalos.setStyle("-fx-font-size: 13px; -fx-text-fill: #333333; -fx-line-spacing: 3px;");
+                lblGargalos.setWrapText(true);
 
+                Label lblOtimizacao = new Label("Otimização da Frota: " +
+                        String.format("O sistema %s durante a simulação.",
+                                (stats.getCaminhoesGrandesAdicionados() > 0) ?
+                                        "precisou adicionar " + stats.getCaminhoesGrandesAdicionados() +
+                                                " caminhões grandes além da frota inicial" :
+                                        "não precisou adicionar novos caminhões grandes à frota inicial"));
+                lblOtimizacao.setStyle("-fx-font-size: 13px; -fx-text-fill: #333333; -fx-line-spacing: 3px;");
+                lblOtimizacao.setWrapText(true);
 
-                if (stats.getCaminhoesGrandesAdicionados() > 0) {
-                    if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText(String.format(brLocale, "Otimização da Frota: O sistema precisou adicionar %d caminhões grandes além da frota inicial para atender à demanda.", stats.getCaminhoesGrandesAdicionados()));
-                } else {
-                    if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText("Otimização da Frota: A frota inicial de caminhões grandes foi suficiente para a demanda observada, não havendo adições durante a simulação.");
-                }
+                discoverySection.getChildren().addAll(discoveryTitle, lblEficiencia, lblDistribuicao, lblGargalos, lblOtimizacao);
+                mainContainer.getChildren().add(discoverySection);
 
-                // 4. Popular Conclusão
+                // ---- Seção 4: Conclusão ----
+                VBox conclusionSection = new VBox(15);
+                conclusionSection.setAlignment(Pos.CENTER);
+                conclusionSection.setPadding(new Insets(25));
+                conclusionSection.setStyle("-fx-background-color: #34495e; -fx-padding: 25px; " +
+                        "-fx-border-radius: 8px; -fx-background-radius: 8px;");
+
+                Label conclusionTitle = new Label("Conclusão");
+                conclusionTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;");
+
+                Label conclusionText1 = new Label("A simulação demonstra que o sistema de coleta de lixo de Teresina, " +
+                        String.format(brLocale, "com a configuração testada, apresentou uma eficiência de %.2f%% na coleta.", eficienciaColeta));
+                conclusionText1.setStyle("-fx-font-size: 13px; -fx-text-fill: #ecf0f1; -fx-line-spacing: 4px; -fx-text-alignment: justify;");
+                conclusionText1.setWrapText(true);
+
                 int numCGNecessarios = stats.calcularEstimativaCaminhoesGrandesNecessarios();
-                String conclusaoTexto1 = String.format(brLocale,
-                        "A simulação demonstra que o sistema de coleta de lixo de Teresina, com a configuração testada, apresentou uma eficiência de %.2f%% na coleta. ", eficienciaColeta);
-                conclusaoTexto1 += "O principal fator limitante para o transporte final ao aterro sanitário frequentemente reside no número e na gestão dos caminhões grandes disponíveis. ";
-                if (stats.getCaminhoesGrandesAdicionados() > 0) {
-                    conclusaoTexto1 += String.format(brLocale, "Na simulação atual, %d caminhões grandes foram adicionados dinamicamente, indicando uma demanda que excedeu a capacidade inicial da frota de transporte.", stats.getCaminhoesGrandesAdicionados());
-                } else if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0 && stats.getLixoTotalTransportado() == 0) {
-                    conclusaoTexto1 += "A simulação não apresentou dados de coleta para avaliar a frota de caminhões grandes.";
-                }
-                else {
-                    conclusaoTexto1 += "A frota inicial de caminhões grandes mostrou-se adequada durante esta simulação.";
-                }
-                if (lblConclusaoTexto1 != null) lblConclusaoTexto1.setText(conclusaoTexto1);
+                Label conclusionHighlight = new Label(String.format(brLocale, "%d Caminhões de %d Toneladas",
+                        numCGNecessarios, CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000));
+                conclusionHighlight.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #ffffff; " +
+                        "-fx-padding: 15px 0px; -fx-alignment: center; -fx-background-color: #2c3e50; " +
+                        "-fx-background-radius: 5px; -fx-border-color: #46627f; -fx-border-width: 1px; -fx-border-radius: 5px;");
 
-                if (lblConclusaoCaminhoesNecessarios != null) lblConclusaoCaminhoesNecessarios.setText(String.format(brLocale, "%d Caminhões de %d Toneladas", numCGNecessarios, CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000));
+                Label conclusionText2 = new Label("Esta conclusão considera a quantidade total de lixo coletado diariamente nas cinco zonas e a capacidade de transporte dos caminhões grandes. " +
+                        String.format(brLocale, "Com uma frota mínima de %d caminhões grandes, o sistema pode operar com eficiência.", numCGNecessarios));
+                conclusionText2.setStyle("-fx-font-size: 13px; -fx-text-fill: #ecf0f1; -fx-line-spacing: 4px; -fx-text-alignment: justify;");
+                conclusionText2.setWrapText(true);
 
-                if (lblConclusaoTexto2 != null) lblConclusaoTexto2.setText(String.format(brLocale, "Esta conclusão considera a quantidade total de lixo coletado diariamente nas cinco zonas e a capacidade de transporte dos caminhões grandes. Com uma frota mínima de %d caminhões grandes, o sistema pode operar com eficiência, minimizando tempos de espera nas estações de transferência e garantindo o transporte adequado do lixo coletado.", numCGNecessarios));
+                conclusionSection.getChildren().addAll(conclusionTitle, conclusionText1, conclusionHighlight, conclusionText2);
+                mainContainer.getChildren().add(conclusionSection);
 
-                // Mudar para a aba de relatório
-                if (tabPanePrincipal != null && tabRelatorioFinal != null) {
+                scrollPane.setContent(mainContainer);
+
+                // Definir o conteúdo na aba
+                if (tabRelatorioFinal != null) {
+                    tabRelatorioFinal.setContent(scrollPane);
                     tabPanePrincipal.getSelectionModel().select(tabRelatorioFinal);
+                    adicionarLog("Relatório final gerado programaticamente com sucesso!");
+                } else {
+                    adicionarLog("ERRO: Aba de relatório final não encontrada.");
                 }
+
             } catch (Exception e) {
-                adicionarLog("Erro ao gerar relatório gráfico: " + e.getMessage());
+                adicionarLog("ERRO: Falha ao gerar relatório programaticamente: " + e.getMessage());
                 e.printStackTrace();
             }
         });
