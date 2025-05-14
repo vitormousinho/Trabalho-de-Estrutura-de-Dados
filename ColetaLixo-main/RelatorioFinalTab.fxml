@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane fitToHeight="true" fitToWidth="true" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <VBox alignment="TOP_CENTER" spacing="20.0" styleClass="report-container">
+            <padding>
+                <Insets bottom="20.0" left="30.0" right="30.0" top="20.0" />
+            </padding>
+            <children>
+                <Label styleClass="report-title-main" text="RELATÓRIO FINAL DA SIMULAÇÃO DE COLETA DE LIXO EM TERESINA" />
+                <VBox alignment="CENTER_LEFT" spacing="10.0" styleClass="report-section-box">
+                    <children>
+                        <Label styleClass="report-section-title" text="Lixo Gerado por Zona" />
+                        <BarChart fx:id="barChartLixoPorZona" legendVisible="false" prefHeight="350.0">
+                            <xAxis>
+                                <CategoryAxis fx:id="xAxisZonas" label="Zonas Urbanas" side="BOTTOM" />
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis fx:id="yAxisLixoGerado" label="Lixo Gerado (kg)" side="LEFT" />
+                            </yAxis>
+                        </BarChart>
+                    </children>
+                </VBox>
+                <VBox alignment="CENTER_LEFT" spacing="10.0" styleClass="report-section-box">
+                    <children>
+                        <Label styleClass="report-section-title" text="Métricas por Estação" />
+                        <TableView fx:id="tableViewMetricasEstacao" prefHeight="150.0">
+                            <columns>
+                                <TableColumn fx:id="colEstacaoNome" prefWidth="150.0" text="Estação" />
+                                <TableColumn fx:id="colCaminhoesAtendidos" prefWidth="150.0" style="-fx-alignment: CENTER;" text="Caminhões Atendidos" />
+                                <TableColumn fx:id="colTempoMedioEspera" prefWidth="180.0" style="-fx-alignment: CENTER;" text="Tempo Médio de Espera" />
+                                <TableColumn fx:id="colLixoTransferidoEstacao" prefWidth="150.0" style="-fx-alignment: CENTER_RIGHT;" text="Lixo Transferido" />
+                            </columns>
+                        </TableView>
+                    </children>
+                </VBox>
+                <VBox spacing="15.0" styleClass="report-discovery-box">
+                    <children>
+                        <Label styleClass="report-section-title-alt" text="Principais Descobertas" />
+                        <Label fx:id="lblEficienciaColeta" styleClass="report-discovery-text" wrapText="true" />
+                        <Label fx:id="lblDistribuicaoLixo" styleClass="report-discovery-text" wrapText="true" />
+                        <Label fx:id="lblGargalosSistema" styleClass="report-discovery-text" wrapText="true" />
+                        <Label fx:id="lblOtimizacaoFrota" styleClass="report-discovery-text" wrapText="true" />
+                    </children>
+                </VBox>
+                <VBox alignment="CENTER" spacing="15.0" styleClass="report-conclusion-box">
+                    <children>
+                        <Label styleClass="report-conclusion-title" text="Conclusão" />
+                        <Label fx:id="lblConclusaoTexto1" styleClass="report-conclusion-text" wrapText="true" />
+                        <Label fx:id="lblConclusaoCaminhoesNecessarios" alignment="CENTER" styleClass="report-conclusion-highlight" />
+                        <Label fx:id="lblConclusaoTexto2" styleClass="report-conclusion-text" wrapText="true" />
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </content>
+</ScrollPane>

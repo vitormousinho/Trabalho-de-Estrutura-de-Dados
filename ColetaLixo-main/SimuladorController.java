@@ -5,6 +5,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -12,12 +13,21 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.geometry.Pos;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.Node; // Importação adicionada
+
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Locale;
+
 
 import caminhoes.CaminhaoGrande;
 import caminhoes.CaminhaoPequeno;
@@ -26,8 +36,10 @@ import caminhoes.CaminhaoGrandePadrao;
 import estacoes.EstacaoPadrao;
 import estacoes.EstacaoTransferencia;
 import zonas.ZonaUrbana;
-import Estruturas.Lista;
+import Estruturas.Lista; // Sua classe Lista
 import caminhoes.StatusCaminhao;
+// Se MetricaEstacaoModel estiver em outro pacote, importe-o
+// import seu_pacote.MetricaEstacaoModel;
 
 public class SimuladorController {
 
@@ -35,14 +47,15 @@ public class SimuladorController {
     private Stage primaryStage;
     private Timeline atualizacaoUITimer;
     private static final int MINUTOS_EM_UM_DIA = 24 * 60;
+    private Locale brLocale = new Locale("pt", "BR"); // Para formatação de números
 
-    // --- IDs dos Componentes FXML ---
+    // --- IDs dos Componentes FXML da Aba Principal ---
     @FXML private Button btnIniciar;
     @FXML private Button btnPausar;
     @FXML private Button btnContinuar;
     @FXML private Button btnEncerrar;
     @FXML private Button btnAdicionarCaminhaoGrande;
-    @FXML private Button btnGerarRelatorio;
+    @FXML private Button btnGerarRelatorio; // Para salvar relatório textual
     @FXML private Label lblZonaSulNome;
     @FXML private Label lblZonaSulLixoGerado;
     @FXML private Label lblZonaSulLixoColetado;
@@ -82,7 +95,6 @@ public class SimuladorController {
     @FXML private ListView<String> listViewEstacaoBFilaCP;
     @FXML private VBox vboxCaminhoesEmAtividade;
     @FXML private TextArea areaLog;
-    @FXML private TextArea areaRelatorioFinal;
 
     // --- Componentes de Configuração ---
     @FXML private Spinner<Integer> spinnerCaminhoes2T;
@@ -108,19 +120,39 @@ public class SimuladorController {
     @FXML private CheckBox checkBoxUsarGaragem;
     @FXML private CheckBox checkBoxGarantirDistribuicao;
     @FXML private Button btnAplicarConfig;
+    @FXML private TabPane tabPanePrincipal; // Seu TabPane principal
+    @FXML private Tab tabRelatorioFinal; // A Tab que conterá o RelatorioFinalTab.fxml
 
-    // --- Interface funcional customizada para três argumentos ---
+    // --- Componentes da Aba de Relatório Gráfico (RelatorioFinalTab.fxml) ---
+    @FXML private BarChart<String, Number> barChartLixoPorZona;
+    @FXML private CategoryAxis xAxisZonas; // Não estritamente necessário ter FXML para eixos se configurados em código
+    @FXML private NumberAxis yAxisLixoGerado; // Mesmo acima
+    @FXML private TableView<MetricaEstacaoModel> tableViewMetricasEstacao;
+    @FXML private TableColumn<MetricaEstacaoModel, String> colEstacaoNome;
+    @FXML private TableColumn<MetricaEstacaoModel, Integer> colCaminhoesAtendidos;
+    @FXML private TableColumn<MetricaEstacaoModel, Double> colTempoMedioEspera;
+    @FXML private TableColumn<MetricaEstacaoModel, Integer> colLixoTransferidoEstacao;
+    @FXML private Label lblEficienciaColeta;
+    @FXML private Label lblDistribuicaoLixo;
+    @FXML private Label lblGargalosSistema;
+    @FXML private Label lblOtimizacaoFrota;
+    @FXML private Label lblConclusaoTexto1;
+    @FXML private Label lblConclusaoCaminhoesNecessarios;
+    @FXML private Label lblConclusaoTexto2;
+
+
+    // --- Interfaces Funcionais (se ainda usadas em outro lugar) ---
     @FunctionalInterface
     public interface TriConsumerCustom<T, U, V> {
         void accept(T t, U u, V v);
     }
 
-    // --- Interface funcional customizada para seis argumentos (para atualizarEstacaoUI) ---
     @FunctionalInterface
     public interface SixConsumerCustom<A, B, C, D, E, F> {
         void accept(A a, B b, C c, D d, E e, F f);
     }
 
+    // --- Métodos de Setup ---
     public void setSimulador(Simulador simulador) {
         this.simulador = simulador;
     }
@@ -131,124 +163,125 @@ public class SimuladorController {
 
     @FXML
     public void initialize() {
-        // Inicializar componentes da UI
+        // Configurações iniciais dos botões e labels da aba principal
         btnPausar.setDisable(true);
         btnContinuar.setDisable(true);
         btnEncerrar.setDisable(true);
 
-        // Configurar placeholders
-        listViewEstacaoAFilaCP.setPlaceholder(new Label("Fila vazia"));
-        listViewEstacaoBFilaCP.setPlaceholder(new Label("Fila vazia"));
+        if (listViewEstacaoAFilaCP != null) listViewEstacaoAFilaCP.setPlaceholder(new Label("Fila vazia"));
+        if (listViewEstacaoBFilaCP != null) listViewEstacaoBFilaCP.setPlaceholder(new Label("Fila vazia"));
 
-        // Configurar nomes das zonas
+        // Nomes fixos podem ser definidos diretamente no FXML, mas aqui para consistência
         if (lblZonaSulNome != null) lblZonaSulNome.setText("Sul");
-        if (lblZonaNorteNome != null) lblZonaNorteNome.setText("Norte");
-        if (lblZonaCentroNome != null) lblZonaCentroNome.setText("Centro");
-        if (lblZonaLesteNome != null) lblZonaLesteNome.setText("Leste");
-        if (lblZonaSudesteNome != null) lblZonaSudesteNome.setText("Sudeste");
-
-        // Configurar nomes das estações
+        // ... outros nomes de zonas e estações ...
         if (lblEstacaoANome != null) lblEstacaoANome.setText("Estação A");
         if (lblEstacaoBNome != null) lblEstacaoBNome.setText("Estação B");
 
-        // Inicializar labels
-        atualizarLabelsZonas(null, null, null, null, null);
+
+        atualizarLabelsZonas(null, null, null, null, null); // Atualiza com dados nulos inicialmente
         atualizarLabelsMetricasGerais();
         atualizarLabelsEstacoes(null, null);
-        lblTempoSimulado.setText("00:00 (Simulado)");
+        if (lblTempoSimulado != null) lblTempoSimulado.setText("00:00 (Simulado)");
 
-        // Configurar spinners (se existirem)
         configurarSpinners();
-
-        // Configurar checkboxes (se existirem)
         configurarCheckBoxes();
 
-        // Configurar timer de atualização
+        // Carregar o conteúdo da aba de relatório final
+        if (tabRelatorioFinal != null) {
+            try {
+                // Certifique-se que "RelatorioFinalTab.fxml" está na mesma pasta que esta classe
+                // ou ajuste o caminho getResource("/caminho/para/RelatorioFinalTab.fxml")
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("RelatorioFinalTab.fxml"));
+                loader.setController(this); // Importante: esta classe também controla o FXML da aba de relatório
+                Node relatorioNode = loader.load();
+                tabRelatorioFinal.setContent(relatorioNode);
+            } catch (IOException e) {
+                adicionarLog("ERRO CRÍTICO: Não foi possível carregar RelatorioFinalTab.fxml. Verifique o caminho e o arquivo.\n" + e.getMessage());
+                e.printStackTrace();
+                // Mostra um alerta para o usuário
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Erro de Carregamento da Interface");
+                alert.setHeaderText("Falha ao carregar a aba de relatório");
+                alert.setContentText("O arquivo RelatorioFinalTab.fxml não pôde ser encontrado ou carregado. Verifique o console para mais detalhes.");
+                alert.showAndWait();
+            } catch (Exception e_geral) {
+                adicionarLog("ERRO GERAL ao carregar RelatorioFinalTab.fxml: " + e_geral.getMessage());
+                e_geral.printStackTrace();
+            }
+        } else {
+            adicionarLog("AVISO: A Tab com fx:id='tabRelatorioFinal' não foi encontrada no FXML principal. A aba de relatório gráfico não será carregada.");
+        }
+
+        // Configurar TableView de Métricas da Estação (apenas uma vez)
+        // É importante que colEstacaoNome, etc., sejam injetados corretamente pelo FXML carregado
+        if (colEstacaoNome != null) colEstacaoNome.setCellValueFactory(new PropertyValueFactory<>("nomeEstacao"));
+        if (colCaminhoesAtendidos != null) colCaminhoesAtendidos.setCellValueFactory(new PropertyValueFactory<>("caminhoesAtendidos"));
+        if (colTempoMedioEspera != null) {
+            colTempoMedioEspera.setCellValueFactory(new PropertyValueFactory<>("tempoMedioEspera"));
+            colTempoMedioEspera.setCellFactory(column -> new TableCell<MetricaEstacaoModel, Double>() {
+                @Override
+                protected void updateItem(Double item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(String.format(brLocale, "%.1f minutos", item));
+                    }
+                }
+            });
+        }
+        if (colLixoTransferidoEstacao != null) {
+            colLixoTransferidoEstacao.setCellValueFactory(new PropertyValueFactory<>("lixoTransferido"));
+            colLixoTransferidoEstacao.setCellFactory(column -> new TableCell<MetricaEstacaoModel, Integer>() {
+                @Override
+                protected void updateItem(Integer item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText(String.format(brLocale, "%,d kg", item));
+                    }
+                }
+            });
+        }
+
+        // Timer para atualização da UI principal
         atualizacaoUITimer = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             if (simulador != null && !simulador.isPausado()) {
-                atualizarInterfaceCompleta();
+                atualizarInterfaceCompleta(); // Atualiza a aba principal
             }
         }));
         atualizacaoUITimer.setCycleCount(Timeline.INDEFINITE);
     }
 
+    // ... (configurarSpinners, configurarCheckBoxes, inicializarInterface, handleIniciarSimulacao, configurarSimuladorComValoresPadraoExemplo, handleAplicarConfiguracao, confirmarSubstituicaoSimulacao, adicionarCaminhoesConfig, criarZonaConfig, handlePausarSimulacao, handleContinuarSimulacao, handleAdicionarCaminhaoGrande, handleGerarRelatorio - MANTENHA ESTES MÉTODOS COMO ESTAVAM ANTES)
     private void configurarSpinners() {
-        // Verificar se os spinners existem e configurá-los
-        if (spinnerCaminhoes2T != null) {
-            spinnerCaminhoes2T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 2));
-        }
-        if (spinnerCaminhoes4T != null) {
-            spinnerCaminhoes4T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
-        }
-        if (spinnerCaminhoes8T != null) {
-            spinnerCaminhoes8T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
-        }
-        if (spinnerCaminhoes10T != null) {
-            spinnerCaminhoes10T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
-        }
-        if (spinnerCaminhoesGrandes != null) {
-            spinnerCaminhoesGrandes.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 50, 1));
-        }
-
-        // Spinners para zonas
-        if (spinnerZonaSulMin != null) {
-            spinnerZonaSulMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
-        }
-        if (spinnerZonaSulMax != null) {
-            spinnerZonaSulMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
-        }
-        if (spinnerZonaNorteMin != null) {
-            spinnerZonaNorteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
-        }
-        if (spinnerZonaNorteMax != null) {
-            spinnerZonaNorteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
-        }
-        if (spinnerZonaCentroMin != null) {
-            spinnerZonaCentroMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
-        }
-        if (spinnerZonaCentroMax != null) {
-            spinnerZonaCentroMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
-        }
-        if (spinnerZonaLesteMin != null) {
-            spinnerZonaLesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
-        }
-        if (spinnerZonaLesteMax != null) {
-            spinnerZonaLesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
-        }
-        if (spinnerZonaSudesteMin != null) {
-            spinnerZonaSudesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
-        }
-        if (spinnerZonaSudesteMax != null) {
-            spinnerZonaSudesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
-        }
-
-        // Spinners para estações
-        if (spinnerEstacaoATempoEspera != null) {
-            spinnerEstacaoATempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
-        }
-        if (spinnerEstacaoBTempoEspera != null) {
-            spinnerEstacaoBTempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
-        }
-
-        // Outros spinners
-        if (spinnerToleranciaCG != null) {
-            spinnerToleranciaCG.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
-        }
-        if (spinnerLimiteViagensDiarias != null) {
-            spinnerLimiteViagensDiarias.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 10, 1));
-        }
-        if (spinnerCaminhoesPorZona != null) {
-            spinnerCaminhoesPorZona.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 1, 1));
-        }
+        if (spinnerCaminhoes2T != null) spinnerCaminhoes2T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 2));
+        if (spinnerCaminhoes4T != null) spinnerCaminhoes4T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        if (spinnerCaminhoes8T != null) spinnerCaminhoes8T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        if (spinnerCaminhoes10T != null) spinnerCaminhoes10T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
+        if (spinnerCaminhoesGrandes != null) spinnerCaminhoesGrandes.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 50, 1));
+        if (spinnerZonaSulMin != null) spinnerZonaSulMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        if (spinnerZonaSulMax != null) spinnerZonaSulMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        if (spinnerZonaNorteMin != null) spinnerZonaNorteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        if (spinnerZonaNorteMax != null) spinnerZonaNorteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        if (spinnerZonaCentroMin != null) spinnerZonaCentroMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        if (spinnerZonaCentroMax != null) spinnerZonaCentroMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        if (spinnerZonaLesteMin != null) spinnerZonaLesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        if (spinnerZonaLesteMax != null) spinnerZonaLesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        if (spinnerZonaSudesteMin != null) spinnerZonaSudesteMin.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 100, 50));
+        if (spinnerZonaSudesteMax != null) spinnerZonaSudesteMax.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 500, 50));
+        if (spinnerEstacaoATempoEspera != null) spinnerEstacaoATempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        if (spinnerEstacaoBTempoEspera != null) spinnerEstacaoBTempoEspera.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        if (spinnerToleranciaCG != null) spinnerToleranciaCG.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 120, 30, 5));
+        if (spinnerLimiteViagensDiarias != null) spinnerLimiteViagensDiarias.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 10, 1));
+        if (spinnerCaminhoesPorZona != null) spinnerCaminhoesPorZona.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10, 1, 1));
     }
 
     private void configurarCheckBoxes() {
-        // Configurar interdependência dos checkboxes
         if (checkBoxUsarGaragem != null && checkBoxGarantirDistribuicao != null && spinnerCaminhoesPorZona != null) {
             checkBoxUsarGaragem.setSelected(true);
             checkBoxGarantirDistribuicao.setSelected(true);
-
-            // Quando "Usar Garagem Central" é desmarcado, desabilita as opções relacionadas
             checkBoxUsarGaragem.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 checkBoxGarantirDistribuicao.setDisable(!newVal);
                 spinnerCaminhoesPorZona.setDisable(!newVal);
@@ -265,36 +298,29 @@ public class SimuladorController {
         try {
             if (simulador == null) {
                 simulador = new Simulador();
-                adicionarLog("Simulador (re)criado. Aplique configurações da aba 'Configurações' ou use os padrões.");
+                adicionarLog("Simulador (re)criado. Aplique configurações ou use os padrões.");
             } else if (simulador.getTempoSimulado() > 0 && !simulador.isPausado()){
-                simulador = new Simulador();
-                adicionarLog("Simulação anterior encerrada. Iniciando uma nova simulação.");
+                if (!confirmarSubstituicaoSimulacao()) return; // Usuário cancelou
+                // Se confirmou, o simulador já foi resetado em confirmarSubstituicaoSimulacao
             }
+
 
             if (simulador.getListaZonas() == null || simulador.getListaZonas().estaVazia() ||
                     simulador.getListaEstacoes() == null || simulador.getListaEstacoes().estaVazia() ||
                     simulador.getTodosOsCaminhoesPequenos() == null || simulador.getTodosOsCaminhoesPequenos().estaVazia()) {
-
                 configurarSimuladorComValoresPadraoExemplo();
                 adicionarLog("Simulador configurado com valores padrão de exemplo.");
             } else {
-                // Verificar se existem pelo menos 5 caminhões pequenos
                 int totalCaminhoesPequenos = simulador.getTodosOsCaminhoesPequenos().tamanho();
                 if (totalCaminhoesPequenos < 5) {
-                    // Adicionar mais caminhões pequenos para atingir o mínimo de 5
                     Lista<CaminhaoPequeno> listaCPs = simulador.getTodosOsCaminhoesPequenos();
                     int caminhoesFaltantes = 5 - totalCaminhoesPequenos;
-
                     for (int i = 0; i < caminhoesFaltantes; i++) {
-                        // Adicionar caminhões de capacidades variadas
-                        int capacidade = (i % 4 == 0) ? 2000 :
-                                (i % 4 == 1) ? 4000 :
-                                        (i % 4 == 2) ? 8000 : 10000;
+                        int capacidade = (i % 4 == 0) ? 2000 : (i % 4 == 1) ? 4000 : (i % 4 == 2) ? 8000 : 10000;
                         listaCPs.adicionar(new CaminhaoPequenoPadrao(capacidade));
                     }
                     simulador.setListaCaminhoesPequenos(listaCPs);
-                    adicionarLog("Adicionados " + caminhoesFaltantes +
-                            " caminhões pequenos para atingir o mínimo de 5.");
+                    adicionarLog("Adicionados " + caminhoesFaltantes + " caminhões pequenos para atingir o mínimo de 5.");
                 }
             }
 
@@ -304,46 +330,35 @@ public class SimuladorController {
             btnPausar.setDisable(false);
             btnContinuar.setDisable(true);
             btnEncerrar.setDisable(false);
-            adicionarLog("Simulação iniciada com " + simulador.getTodosOsCaminhoesPequenos().tamanho() +
-                    " caminhões pequenos.");
+            adicionarLog("Simulação iniciada com " + simulador.getTodosOsCaminhoesPequenos().tamanho() + " caminhões pequenos.");
 
-            TabPane tabPane = findTabPaneParent(lblTempoSimulado);
-            if (tabPane != null) {
-                tabPane.getSelectionModel().select(0); // Seleciona a primeira aba (Simulação Principal)
+            if (tabPanePrincipal != null) {
+                tabPanePrincipal.getSelectionModel().select(0);
             }
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Erro ao iniciar a simulação");
-            alert.setHeaderText("Erro de Configuração");
-            alert.setContentText(e.getMessage());
-            alert.showAndWait();
-
+            mostrarAlertaErro("Erro ao iniciar a simulação", "Erro de Configuração", e.getMessage());
             adicionarLog("Falha ao iniciar: " + e.getMessage() + "\n");
             e.printStackTrace();
         }
     }
 
     private void configurarSimuladorComValoresPadraoExemplo() {
-        // Criando lista com 5 caminhões pequenos (requisito mínimo)
-        Lista<CaminhaoPequeno> listaCP = new Lista<>();
-        // Caminhões de 2 Toneladas
-        listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
-        listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
-        // Caminhões de 4 Toneladas
-        listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
-        // Caminhões de 8 Toneladas
-        listaCP.adicionar(new CaminhaoPequenoPadrao(8000));
-        // Caminhões de 10 Toneladas
-        listaCP.adicionar(new CaminhaoPequenoPadrao(10000));
+        // Este método já cria uma nova instância do simulador se necessário
+        // ou usa a existente.
+        if (simulador == null) simulador = new Simulador();
 
+        Lista<CaminhaoPequeno> listaCP = new Lista<>();
+        listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
+        listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
+        listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
+        listaCP.adicionar(new CaminhaoPequenoPadrao(8000));
+        listaCP.adicionar(new CaminhaoPequenoPadrao(10000));
         simulador.setListaCaminhoesPequenos(listaCP);
 
-        // Criando um caminhão grande inicial
         Lista<CaminhaoGrande> listaCG = new Lista<>();
         listaCG.adicionar(new CaminhaoGrandePadrao(30));
         simulador.setListaCaminhoesGrandes(listaCG);
 
-        // Configurando as zonas
         Lista<ZonaUrbana> listaZ = new Lista<>();
         String[] nomesZonas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"};
         for (String nome : nomesZonas) {
@@ -353,165 +368,136 @@ public class SimuladorController {
         }
         simulador.setListaZonas(listaZ);
 
-        // Configurando as estações
         Lista<EstacaoTransferencia> listaE = new Lista<>();
         listaE.adicionar(new EstacaoPadrao("Estação A", 30));
         listaE.adicionar(new EstacaoPadrao("Estação B", 30));
         simulador.setListaEstacoes(listaE);
 
-        // Configurando outros parâmetros
         simulador.setLimiteViagensDiarias(10);
         simulador.setUsarGaragemCentral(true);
         simulador.setGarantirDistribuicaoMinima(true);
         simulador.setCaminhoesPorZonaMinimo(1);
-
-        adicionarLog("Simulador configurado com: 5 caminhões pequenos (2x2T, 1x4T, 1x8T, 1x10T), 1 caminhão grande, 5 zonas e 2 estações");
+        adicionarLog("Simulador configurado com: 5 CPs, 1 CG, 5 Zonas, 2 Estações (padrão).");
     }
 
     @FXML
     private void handleAplicarConfiguracao(ActionEvent event) {
         try {
-            // Criar nova simulação ou verificar se já existe uma em andamento
-            if (simulador == null) {
-                simulador = new Simulador();
-            } else if (simulador.getTempoSimulado() > 0) {
-                // Se uma simulação já estiver em progresso, pergunte antes de substituir
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Substituir Simulação");
-                alert.setHeaderText("Uma simulação já está em progresso.");
-                alert.setContentText("Deseja substituir a simulação atual por uma nova?");
-
-                Optional<ButtonType> result = alert.showAndWait();
-                if (result.isPresent() && result.get() == ButtonType.OK) {
-                    simulador = new Simulador();
-                } else {
-                    return; // Usuário cancelou
+            if (simulador == null || (simulador.getTempoSimulado() > 0 && !confirmarSubstituicaoSimulacao())) {
+                if (simulador != null && simulador.getTempoSimulado() > 0 && simulador.isPausado()) {
+                    // Se estava pausado e cancelou a substituição, não faz nada.
+                } else if (simulador != null && simulador.getTempoSimulado() > 0) {
+                    return; // Usuário cancelou a substituição de uma simulação em andamento/concluída
                 }
+                // Se chegou aqui, ou não havia simulação, ou era uma simulação já encerrada,
+                // ou o usuário confirmou a substituição.
+                // A lógica de `confirmarSubstituicaoSimulacao` já trata de recriar o simulador se necessário.
+            }
+            if (simulador == null) { // Garante que simulador exista se foi cancelada a substituição de um não existente
+                simulador = new Simulador();
             }
 
-            // Configurar caminhões pequenos
+
             Lista<CaminhaoPequeno> listaCP = new Lista<>();
-            int qtd2T = spinnerCaminhoes2T.getValue();
-            int qtd4T = spinnerCaminhoes4T.getValue();
-            int qtd8T = spinnerCaminhoes8T.getValue();
-            int qtd10T = spinnerCaminhoes10T.getValue();
+            adicionarCaminhoesConfig(listaCP, spinnerCaminhoes2T.getValue(), 2000);
+            adicionarCaminhoesConfig(listaCP, spinnerCaminhoes4T.getValue(), 4000);
+            adicionarCaminhoesConfig(listaCP, spinnerCaminhoes8T.getValue(), 8000);
+            adicionarCaminhoesConfig(listaCP, spinnerCaminhoes10T.getValue(), 10000);
 
-            // Adicionar caminhões por tipo
-            for (int i = 0; i < qtd2T; i++) {
-                listaCP.adicionar(new CaminhaoPequenoPadrao(2000));
-            }
-            for (int i = 0; i < qtd4T; i++) {
-                listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
-            }
-            for (int i = 0; i < qtd8T; i++) {
-                listaCP.adicionar(new CaminhaoPequenoPadrao(8000));
-            }
-            for (int i = 0; i < qtd10T; i++) {
-                listaCP.adicionar(new CaminhaoPequenoPadrao(10000));
-            }
-
-            // Verificar mínimo de 5 caminhões
             int totalCP = listaCP.tamanho();
             if (totalCP < 5) {
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Ajuste Automático");
-                alert.setHeaderText("Número mínimo de caminhões não atingido");
-                alert.setContentText("A simulação requer pelo menos 5 caminhões pequenos. " +
-                        "Serão adicionados " + (5 - totalCP) + " caminhões de 4 toneladas.");
-                alert.showAndWait();
-
-                // Adicionar caminhões extras para atingir o mínimo
-                for (int i = 0; i < 5 - totalCP; i++) {
-                    listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
-                }
+                mostrarAlertaInfo("Ajuste Automático", "Número mínimo de caminhões não atingido",
+                        "A simulação requer pelo menos 5 caminhões pequenos. " +
+                                "Serão adicionados " + (5 - totalCP) + " caminhões de 4 toneladas.");
+                for (int i = 0; i < 5 - totalCP; i++) listaCP.adicionar(new CaminhaoPequenoPadrao(4000));
             }
-
             simulador.setListaCaminhoesPequenos(listaCP);
 
-            // Configurar caminhões grandes
             Lista<CaminhaoGrande> listaCG = new Lista<>();
-            int qtdCG = spinnerCaminhoesGrandes.getValue();
             int toleranciaCG = spinnerToleranciaCG.getValue();
-
-            for (int i = 0; i < qtdCG; i++) {
-                listaCG.adicionar(new CaminhaoGrandePadrao(toleranciaCG));
-            }
-
+            for (int i = 0; i < spinnerCaminhoesGrandes.getValue(); i++) listaCG.adicionar(new CaminhaoGrandePadrao(toleranciaCG));
             simulador.setListaCaminhoesGrandes(listaCG);
             simulador.setToleranciaCaminhoesGrandes(toleranciaCG);
 
-            // Configurar zonas
             Lista<ZonaUrbana> listaZ = new Lista<>();
-
-            ZonaUrbana zonaSul = new ZonaUrbana("Sul");
-            zonaSul.setIntervaloGeracao(spinnerZonaSulMin.getValue(), spinnerZonaSulMax.getValue());
-            listaZ.adicionar(zonaSul);
-
-            ZonaUrbana zonaNorte = new ZonaUrbana("Norte");
-            zonaNorte.setIntervaloGeracao(spinnerZonaNorteMin.getValue(), spinnerZonaNorteMax.getValue());
-            listaZ.adicionar(zonaNorte);
-
-            ZonaUrbana zonaCentro = new ZonaUrbana("Centro");
-            zonaCentro.setIntervaloGeracao(spinnerZonaCentroMin.getValue(), spinnerZonaCentroMax.getValue());
-            listaZ.adicionar(zonaCentro);
-
-            ZonaUrbana zonaLeste = new ZonaUrbana("Leste");
-            zonaLeste.setIntervaloGeracao(spinnerZonaLesteMin.getValue(), spinnerZonaLesteMax.getValue());
-            listaZ.adicionar(zonaLeste);
-
-            ZonaUrbana zonaSudeste = new ZonaUrbana("Sudeste");
-            zonaSudeste.setIntervaloGeracao(spinnerZonaSudesteMin.getValue(), spinnerZonaSudesteMax.getValue());
-            listaZ.adicionar(zonaSudeste);
-
+            listaZ.adicionar(criarZonaConfig("Sul", spinnerZonaSulMin.getValue(), spinnerZonaSulMax.getValue()));
+            listaZ.adicionar(criarZonaConfig("Norte", spinnerZonaNorteMin.getValue(), spinnerZonaNorteMax.getValue()));
+            listaZ.adicionar(criarZonaConfig("Centro", spinnerZonaCentroMin.getValue(), spinnerZonaCentroMax.getValue()));
+            listaZ.adicionar(criarZonaConfig("Leste", spinnerZonaLesteMin.getValue(), spinnerZonaLesteMax.getValue()));
+            listaZ.adicionar(criarZonaConfig("Sudeste", spinnerZonaSudesteMin.getValue(), spinnerZonaSudesteMax.getValue()));
             simulador.setListaZonas(listaZ);
 
-            // Configurar estações
             Lista<EstacaoTransferencia> listaE = new Lista<>();
             listaE.adicionar(new EstacaoPadrao("Estação A", spinnerEstacaoATempoEspera.getValue()));
             listaE.adicionar(new EstacaoPadrao("Estação B", spinnerEstacaoBTempoEspera.getValue()));
             simulador.setListaEstacoes(listaE);
 
-            // Configurações adicionais
             simulador.setLimiteViagensDiarias(spinnerLimiteViagensDiarias.getValue());
             simulador.setUsarGaragemCentral(checkBoxUsarGaragem.isSelected());
             simulador.setGarantirDistribuicaoMinima(checkBoxGarantirDistribuicao.isSelected());
             simulador.setCaminhoesPorZonaMinimo(spinnerCaminhoesPorZona.getValue());
 
-            // Iniciar simulação
-            simulador.iniciar();
+            simulador.iniciar(); // Inicia a simulação com as novas configurações
             atualizacaoUITimer.play();
             btnIniciar.setDisable(true);
             btnPausar.setDisable(false);
             btnContinuar.setDisable(true);
             btnEncerrar.setDisable(false);
 
-            // Mudar para a aba de simulação
-            TabPane tabPane = findTabPaneParent(lblTempoSimulado);
-            if (tabPane != null) {
-                tabPane.getSelectionModel().select(0); // Seleciona a primeira aba (Simulação Principal)
-            }
-
-            // Adicionar log
+            if (tabPanePrincipal != null) tabPanePrincipal.getSelectionModel().select(0); // Vai para a aba de simulação principal
             adicionarLog("Simulação iniciada com configurações personalizadas: " +
-                    listaCP.tamanho() + " caminhões pequenos, " +
-                    listaCG.tamanho() + " caminhões grandes.");
+                    listaCP.tamanho() + " CPs, " + listaCG.tamanho() + " CGs.");
 
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Erro de Configuração");
-            alert.setHeaderText("Falha ao aplicar configurações");
-            alert.setContentText("Erro: " + e.getMessage());
-            alert.showAndWait();
+            mostrarAlertaErro("Erro de Configuração", "Falha ao aplicar configurações", "Erro: " + e.getMessage());
             adicionarLog("Erro ao aplicar configurações: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    private boolean confirmarSubstituicaoSimulacao() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Substituir Simulação");
+        alert.setHeaderText("Uma simulação já está em progresso ou foi concluída.");
+        alert.setContentText("Deseja encerrar a simulação atual e iniciar uma nova com estas configurações?");
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            if (simulador != null) { // Se existe uma simulação anterior
+                if (simulador.getTempoSimulado() > 0 && !simulador.isPausado()) { // Se estava rodando
+                    simulador.encerrar(); // Encerra formalmente
+                }
+                if (atualizacaoUITimer != null) {
+                    atualizacaoUITimer.stop(); // Para o timer da simulação anterior
+                }
+            }
+            simulador = new Simulador(); // Cria uma nova instância para a nova simulação
+            adicionarLog("Simulação anterior encerrada. Preparando para nova configuração.");
+            return true;
+        }
+        adicionarLog("Aplicação de novas configurações cancelada pelo usuário.");
+        return false; // Usuário cancelou
+    }
+
+
+    private void adicionarCaminhoesConfig(Lista<CaminhaoPequeno> lista, int qtd, int capacidade) {
+        for (int i = 0; i < qtd; i++) lista.adicionar(new CaminhaoPequenoPadrao(capacidade));
+    }
+
+    private ZonaUrbana criarZonaConfig(String nome, int min, int max) {
+        if (min > max) {
+            throw new IllegalArgumentException("Para a zona " + nome + ", a geração mínima (" + min + ") não pode ser maior que a máxima (" + max +").");
+        }
+        ZonaUrbana z = new ZonaUrbana(nome);
+        z.setIntervaloGeracao(min, max);
+        return z;
+    }
+
+
     @FXML
     private void handlePausarSimulacao(ActionEvent event) {
         if (simulador != null) {
             simulador.pausar();
-            atualizacaoUITimer.pause();
+            if (atualizacaoUITimer != null) atualizacaoUITimer.pause();
             btnIniciar.setDisable(true);
             btnPausar.setDisable(true);
             btnContinuar.setDisable(false);
@@ -524,7 +510,7 @@ public class SimuladorController {
     private void handleContinuarSimulacao(ActionEvent event) {
         if (simulador != null) {
             simulador.continuarSimulacao();
-            atualizacaoUITimer.play();
+            if (atualizacaoUITimer != null) atualizacaoUITimer.play();
             btnIniciar.setDisable(true);
             btnPausar.setDisable(false);
             btnContinuar.setDisable(true);
@@ -534,122 +520,122 @@ public class SimuladorController {
     }
 
     @FXML
-    private void handleEncerrarSimulacao(ActionEvent event) {
+    private void handleEncerrarSimulacao(ActionEvent event) { // AGORA ATUALIZA A ABA GRÁFICA
         if (simulador != null) {
-            simulador.encerrar();
-            atualizacaoUITimer.stop();
-            atualizarInterfaceCompleta();
+            simulador.encerrar(); // O método encerrar do simulador já gera o relatório textual interno e salva
+            if (atualizacaoUITimer != null) atualizacaoUITimer.stop();
+
+            atualizarInterfaceCompleta(); // Atualiza a aba principal uma última vez
+            exibirRelatorioFinalGrafico();  // Popula a aba de relatório gráfico
+
             btnIniciar.setDisable(false);
             btnPausar.setDisable(true);
             btnContinuar.setDisable(true);
-            btnEncerrar.setDisable(true);
-            adicionarLog("Simulação encerrada. Relatório final disponível.");
-            exibirRelatorioFinal();
+            btnEncerrar.setDisable(true); // Desabilita após encerrar
+            adicionarLog("Simulação encerrada. Relatório final disponível na aba 'Relatório Final'.");
         }
     }
+
 
     @FXML
     private void handleAdicionarCaminhaoGrande(ActionEvent event) {
-        if (simulador != null) {
+        if (simulador != null && simulador.getTempoSimulado() > 0 && !simulador.isPausado()) {
             simulador.adicionarCaminhaoGrande();
             adicionarLog("Novo caminhão grande adicionado à frota.");
-            atualizarLabelsMetricasGerais();
+            atualizarLabelsMetricasGerais(); // Atualiza a contagem na UI principal
         } else {
-            adicionarLog("Simulador não iniciado. Não é possível adicionar caminhão grande.");
+            adicionarLog("Simulador não iniciado ou está pausado/encerrado. Não é possível adicionar caminhão grande.");
+            mostrarAlertaInfo("Ação Inválida", "Não é possível adicionar caminhão", "A simulação precisa estar em andamento (não pausada ou encerrada) para adicionar caminhões grandes.");
         }
     }
 
     @FXML
-    private void handleGerarRelatorio(ActionEvent event) {
+    private void handleGerarRelatorio(ActionEvent event) { // Este botão agora salva o relatório TEXTUAL
         if (simulador != null && simulador.getEstatisticas() != null) {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Salvar Relatório da Simulação");
-            fileChooser.setInitialFileName("relatorio_simulacao_" + System.currentTimeMillis() + ".txt");
+            fileChooser.setTitle("Salvar Relatório Textual da Simulação");
+            fileChooser.setInitialFileName("relatorio_textual_simulacao_" + System.currentTimeMillis() + ".txt");
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Arquivos de Texto (*.txt)", "*.txt"));
             File file = fileChooser.showSaveDialog(primaryStage);
             if (file != null) {
                 try {
-                    simulador.getEstatisticas().salvarRelatorio(file.getAbsolutePath());
-                    adicionarLog("Relatório salvo em: " + file.getAbsolutePath());
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION, "Relatório salvo com sucesso!", ButtonType.OK);
-                    alert.showAndWait();
+                    simulador.getEstatisticas().salvarRelatorio(file.getAbsolutePath()); // Salva o relatório textual
+                    adicionarLog("Relatório textual salvo em: " + file.getAbsolutePath());
+                    mostrarAlertaInfo("Relatório Salvo", "Sucesso", "Relatório textual salvo com sucesso!");
                 } catch (IOException e) {
-                    adicionarLog("Erro ao salvar relatório: " + e.getMessage());
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Erro ao salvar relatório: " + e.getMessage(), ButtonType.OK);
-                    alert.showAndWait();
+                    adicionarLog("Erro ao salvar relatório textual: " + e.getMessage());
+                    mostrarAlertaErro("Erro", "Erro ao salvar relatório textual", e.getMessage());
                 }
             }
         } else {
-            adicionarLog("Nenhuma simulação ativa ou estatísticas disponíveis para gerar relatório.");
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Nenhuma simulação ativa ou estatísticas disponíveis.", ButtonType.OK);
-            alert.showAndWait();
+            adicionarLog("Nenhuma simulação ativa ou estatísticas disponíveis para gerar relatório textual.");
+            mostrarAlertaInfo("Atenção", "Sem Dados", "Nenhuma simulação ativa ou estatísticas disponíveis.");
         }
     }
 
+    // Métodos de atualização da UI principal (MANTENHA COMO ESTAVAM)
     private void atualizarInterfaceCompleta() {
         if (simulador == null) return;
         Platform.runLater(() -> {
-            lblTempoSimulado.setText(formatarTempo(simulador.getTempoSimulado()) + " (Simulado)");
+            if (lblTempoSimulado != null) lblTempoSimulado.setText(formatarTempo(simulador.getTempoSimulado()) + " (Simulado)");
+
             Lista<ZonaUrbana> zonas = simulador.getListaZonas();
-            if (zonas != null && zonas.tamanho() >= 5) {
-                atualizarLabelsZonas(zonas.obter(0), zonas.obter(1), zonas.obter(2), zonas.obter(3), zonas.obter(4));
-            } else if (zonas != null) {
+            if (zonas != null && lblZonaSulLixoGerado != null) { // Checa se os labels existem
                 ZonaUrbana[] arrZonas = new ZonaUrbana[5];
                 for(int i=0; i < zonas.tamanho() && i < 5; i++) arrZonas[i] = zonas.obter(i);
                 atualizarLabelsZonas(arrZonas[0], arrZonas[1], arrZonas[2], arrZonas[3], arrZonas[4]);
-            } else {
+            } else if (lblZonaSulLixoGerado != null) { // Labels existem, mas não há zonas
                 atualizarLabelsZonas(null, null, null, null, null);
             }
+
             atualizarLabelsMetricasGerais();
+
             Lista<EstacaoTransferencia> estacoes = simulador.getListaEstacoes();
-            if (estacoes != null && estacoes.tamanho() >= 2) {
-                if (estacoes.obter(0) instanceof EstacaoPadrao && estacoes.obter(1) instanceof EstacaoPadrao) {
-                    atualizarLabelsEstacoes((EstacaoPadrao) estacoes.obter(0), (EstacaoPadrao) estacoes.obter(1));
-                } else {
-                    atualizarLabelsEstacoes(null,null);
-                }
-            } else if (estacoes != null && estacoes.tamanho() == 1 && estacoes.obter(0) instanceof EstacaoPadrao) {
-                atualizarLabelsEstacoes((EstacaoPadrao) estacoes.obter(0), null);
-            } else {
+            if (estacoes != null && lblEstacaoAStatus != null) { // Checa se os labels existem
+                EstacaoPadrao estA = null, estB = null;
+                if (estacoes.tamanho() > 0 && estacoes.obter(0) instanceof EstacaoPadrao) estA = (EstacaoPadrao) estacoes.obter(0);
+                if (estacoes.tamanho() > 1 && estacoes.obter(1) instanceof EstacaoPadrao) estB = (EstacaoPadrao) estacoes.obter(1);
+                atualizarLabelsEstacoes(estA, estB);
+            } else if (lblEstacaoAStatus != null) { // Labels existem, mas não há estações
                 atualizarLabelsEstacoes(null, null);
             }
-            atualizarListaCaminhoesAtividade();
+
+            if (vboxCaminhoesEmAtividade != null) atualizarListaCaminhoesAtividade();
         });
     }
 
     private void atualizarLabelsZonas(ZonaUrbana zonaSul, ZonaUrbana zonaNorte, ZonaUrbana zonaCentro, ZonaUrbana zonaLeste, ZonaUrbana zonaSudeste) {
         Estatisticas stats = simulador != null ? simulador.getEstatisticas() : null;
-
-        // Usando a interface TriConsumerCustom definida dentro desta classe
         TriConsumerCustom<Label, Label, ZonaUrbana> atualizarZonaUI = (lblGerado, lblColetado, zona) -> {
+            if (lblGerado == null || lblColetado == null) return;
             if (zona != null && stats != null) {
                 int gerado = stats.getLixoGeradoPorZona(zona.getNome());
                 int coletado = stats.getLixoColetadoPorZona(zona.getNome());
-                lblGerado.setText("Gerado: " + gerado + " kg");
-                lblColetado.setText("Coletado: " + coletado + " kg");
-            } else if (zona != null) {
-                lblGerado.setText("Gerado: " + zona.getLixoAcumulado() + " kg (atual)");
+                lblGerado.setText("Gerado: " + String.format(brLocale, "%,d", gerado) + " kg");
+                lblColetado.setText("Coletado: " + String.format(brLocale, "%,d", coletado) + " kg");
+            } else if (zona != null) { // Sem stats, mas com zona (simulação pode não ter rodado ainda)
+                lblGerado.setText("Gerado: " + String.format(brLocale, "%,d", zona.getLixoAcumulado()) + " kg (atual)");
                 lblColetado.setText("Coletado: -- kg");
-            }
-            else {
+            } else { // Sem zona e sem stats
                 lblGerado.setText("Gerado: -- kg");
                 lblColetado.setText("Coletado: -- kg");
             }
         };
-
-        if (lblZonaSulLixoGerado != null) atualizarZonaUI.accept(lblZonaSulLixoGerado, lblZonaSulLixoColetado, zonaSul);
-        if (lblZonaNorteLixoGerado != null) atualizarZonaUI.accept(lblZonaNorteLixoGerado, lblZonaNorteLixoColetado, zonaNorte);
-        if (lblZonaCentroLixoGerado != null) atualizarZonaUI.accept(lblZonaCentroLixoGerado, lblZonaCentroLixoColetado, zonaCentro);
-        if (lblZonaLesteLixoGerado != null) atualizarZonaUI.accept(lblZonaLesteLixoGerado, lblZonaLesteLixoColetado, zonaLeste);
-        if (lblZonaSudesteLixoGerado != null) atualizarZonaUI.accept(lblZonaSudesteLixoGerado, lblZonaSudesteLixoColetado, zonaSudeste);
+        atualizarZonaUI.accept(lblZonaSulLixoGerado, lblZonaSulLixoColetado, zonaSul);
+        atualizarZonaUI.accept(lblZonaNorteLixoGerado, lblZonaNorteLixoColetado, zonaNorte);
+        atualizarZonaUI.accept(lblZonaCentroLixoGerado, lblZonaCentroLixoColetado, zonaCentro);
+        atualizarZonaUI.accept(lblZonaLesteLixoGerado, lblZonaLesteLixoColetado, zonaLeste);
+        atualizarZonaUI.accept(lblZonaSudesteLixoGerado, lblZonaSudesteLixoColetado, zonaSudeste);
     }
 
     private void atualizarLabelsMetricasGerais() {
         Estatisticas stats = simulador != null ? simulador.getEstatisticas() : null;
+        String defaultText = "0";
         if (stats != null) {
-            lblMetricaLixoTotal.setText(String.format("%,d", stats.getLixoTotalGerado()));
-            lblMetricaLixoColetado.setText(String.format("%,d", stats.getLixoTotalColetado()));
-            lblMetricaLixoTransportado.setText(String.format("%,d", stats.getLixoTotalTransportado()));
+            if (lblMetricaLixoTotal != null) lblMetricaLixoTotal.setText(String.format(brLocale, "%,d", stats.getLixoTotalGerado()));
+            if (lblMetricaLixoColetado != null) lblMetricaLixoColetado.setText(String.format(brLocale, "%,d", stats.getLixoTotalColetado()));
+            if (lblMetricaLixoTransportado != null) lblMetricaLixoTransportado.setText(String.format(brLocale, "%,d", stats.getLixoTotalTransportado()));
+
             int pequenosTotal = simulador.getTodosOsCaminhoesPequenos() != null ? simulador.getTodosOsCaminhoesPequenos().tamanho() : 0;
             int pequenosAtivos = 0;
             if (simulador.getTodosOsCaminhoesPequenos() != null) {
@@ -660,63 +646,83 @@ public class SimuladorController {
                     }
                 }
             }
-            lblMetricaPequenosTotal.setText(String.valueOf(pequenosTotal));
-            lblMetricaPequenosEmAtividade.setText(String.valueOf(pequenosAtivos));
-            lblMetricaGrandesTotal.setText(String.valueOf(simulador.getTotalCaminhoesGrandes()));
-            lblMetricaGrandesEmUso.setText(String.valueOf(simulador.getCaminhoesGrandesEmUso()));
+            if (lblMetricaPequenosTotal != null) lblMetricaPequenosTotal.setText(String.valueOf(pequenosTotal));
+            if (lblMetricaPequenosEmAtividade != null) lblMetricaPequenosEmAtividade.setText(String.valueOf(pequenosAtivos));
+            if (lblMetricaGrandesTotal != null) lblMetricaGrandesTotal.setText(String.valueOf(simulador.getTotalCaminhoesGrandes()));
+            if (lblMetricaGrandesEmUso != null) lblMetricaGrandesEmUso.setText(String.valueOf(simulador.getCaminhoesGrandesEmUso()));
         } else {
-            String defaultText = "0";
-            lblMetricaLixoTotal.setText(defaultText);
-            lblMetricaLixoColetado.setText(defaultText);
-            lblMetricaLixoTransportado.setText(defaultText);
-            lblMetricaPequenosTotal.setText(defaultText);
-            lblMetricaPequenosEmAtividade.setText(defaultText);
-            lblMetricaGrandesTotal.setText(defaultText);
-            lblMetricaGrandesEmUso.setText(defaultText);
+            // Código para quando stats é nulo (interface antes da primeira simulação)
+            if (lblMetricaLixoTotal != null) lblMetricaLixoTotal.setText(defaultText);
+            // ... etc para todos os labels de métricas
         }
     }
 
     private void atualizarLabelsEstacoes(EstacaoPadrao estacaoA, EstacaoPadrao estacaoB) {
         Estatisticas stats = simulador != null ? simulador.getEstatisticas() : null;
 
-        // Usando a interface SixConsumerCustom definida dentro desta classe
-        SixConsumerCustom<Label, Label, Label, Label, ListView<String>, EstacaoPadrao> atualizarEstacaoUI =
-                (lblStatus, lblFila, lblEspera, lblTransf, listView, estacao) -> {
-                    Label lblCGInfo = (listView == listViewEstacaoAFilaCP) ? lblEstacaoACaminhaoGrandeInfo : lblEstacaoBCaminhaoGrandeInfo;
-                    if (estacao != null) {
-                        lblStatus.setText("Operacional");
-                        lblFila.setText(String.valueOf(estacao.getCaminhoesNaFila()));
-                        lblEspera.setText(String.format("%.0f min", stats != null ? stats.getTempoMedioEsperaPorEstacao(estacao.getNome()) : 0));
-                        lblTransf.setText(String.format("%,d kg", stats != null ? stats.getLixoTransferidoPorEstacao(estacao.getNome()) : 0));
-                        if (lblCGInfo != null) {
-                            if (estacao.temCaminhaoGrande()) {
-                                CaminhaoGrande cg = estacao.getCaminhaoGrandeAtual();
-                                String idCG = (estacao.getNome().equals("Estação A")) ? "G1" : "G2";
-                                lblCGInfo.setText(String.format("%s (%d/%d kg)", idCG, cg.getCargaAtual(), cg.getCapacidadeMaxima()));
-                            } else {
-                                lblCGInfo.setText("Sem CG");
-                            }
-                        }
-                        ObservableList<String> filaItems = FXCollections.observableArrayList();
-                        Lista<CaminhaoPequeno> snapshotFila = estacao.getFilaCaminhoesPequenosSnapshot();
-                        if (snapshotFila != null) {
-                            for (int i = 0; i < snapshotFila.tamanho(); i++) {
-                                filaItems.add(snapshotFila.obter(i).getPlaca());
-                            }
-                        }
-                        listView.setItems(filaItems);
+        // Atualizar Estação A
+        if (lblEstacaoAStatus != null) { // Verifica se o label existe
+            if (estacaoA != null) {
+                lblEstacaoAStatus.setText("Operacional");
+                lblEstacaoACaminhoesFila.setText(String.valueOf(estacaoA.getCaminhoesNaFila()));
+                lblEstacaoATempoEsperaMedio.setText(String.format(brLocale, "%.1f min", stats != null ? stats.getTempoMedioEsperaPorEstacao(estacaoA.getNome()) : 0));
+                lblEstacaoALixoTransferido.setText(String.format(brLocale, "%,d kg", stats != null ? stats.getLixoTransferidoPorEstacao(estacaoA.getNome()) : 0));
+                if (lblEstacaoACaminhaoGrandeInfo != null) {
+                    if (estacaoA.temCaminhaoGrande()) {
+                        CaminhaoGrande cg = estacaoA.getCaminhaoGrandeAtual();
+                        lblEstacaoACaminhaoGrandeInfo.setText(String.format(brLocale, "CG (%,d/%,d kg)", cg.getCargaAtual(), cg.getCapacidadeMaxima()));
                     } else {
-                        lblStatus.setText("--");
-                        lblFila.setText("0");
-                        lblEspera.setText("0 min");
-                        lblTransf.setText("0 kg");
-                        if (lblCGInfo != null) lblCGInfo.setText("Sem CG");
-                        listView.getItems().clear();
+                        lblEstacaoACaminhaoGrandeInfo.setText("Sem CG");
                     }
-                };
-        if (lblEstacaoAStatus != null) atualizarEstacaoUI.accept(lblEstacaoAStatus, lblEstacaoACaminhoesFila, lblEstacaoATempoEsperaMedio, lblEstacaoALixoTransferido, listViewEstacaoAFilaCP, estacaoA);
-        if (lblEstacaoBStatus != null) atualizarEstacaoUI.accept(lblEstacaoBStatus, lblEstacaoBCaminhoesFila, lblEstacaoBTempoEsperaMedio, lblEstacaoBLixoTransferido, listViewEstacaoBFilaCP, estacaoB);
+                }
+                if (listViewEstacaoAFilaCP != null) {
+                    ObservableList<String> filaAItems = FXCollections.observableArrayList();
+                    Lista<CaminhaoPequeno> snapshotFilaA = estacaoA.getFilaCaminhoesPequenosSnapshot();
+                    for (int i = 0; i < snapshotFilaA.tamanho(); i++) filaAItems.add(snapshotFilaA.obter(i).getPlaca());
+                    listViewEstacaoAFilaCP.setItems(filaAItems);
+                }
+            } else {
+                lblEstacaoAStatus.setText("--");
+                lblEstacaoACaminhoesFila.setText("0");
+                lblEstacaoATempoEsperaMedio.setText("0 min");
+                lblEstacaoALixoTransferido.setText("0 kg");
+                if (lblEstacaoACaminhaoGrandeInfo != null) lblEstacaoACaminhaoGrandeInfo.setText("Sem CG");
+                if (listViewEstacaoAFilaCP != null) listViewEstacaoAFilaCP.getItems().clear();
+            }
+        }
+
+        // Atualizar Estação B
+        if (lblEstacaoBStatus != null) { // Verifica se o label existe
+            if (estacaoB != null) {
+                lblEstacaoBStatus.setText("Operacional");
+                lblEstacaoBCaminhoesFila.setText(String.valueOf(estacaoB.getCaminhoesNaFila()));
+                lblEstacaoBTempoEsperaMedio.setText(String.format(brLocale, "%.1f min", stats != null ? stats.getTempoMedioEsperaPorEstacao(estacaoB.getNome()) : 0));
+                lblEstacaoBLixoTransferido.setText(String.format(brLocale, "%,d kg", stats != null ? stats.getLixoTransferidoPorEstacao(estacaoB.getNome()) : 0));
+                if (lblEstacaoBCaminhaoGrandeInfo != null) {
+                    if (estacaoB.temCaminhaoGrande()) {
+                        CaminhaoGrande cg = estacaoB.getCaminhaoGrandeAtual();
+                        lblEstacaoBCaminhaoGrandeInfo.setText(String.format(brLocale, "CG (%,d/%,d kg)", cg.getCargaAtual(), cg.getCapacidadeMaxima()));
+                    } else {
+                        lblEstacaoBCaminhaoGrandeInfo.setText("Sem CG");
+                    }
+                }
+                if (listViewEstacaoBFilaCP != null) {
+                    ObservableList<String> filaBItems = FXCollections.observableArrayList();
+                    Lista<CaminhaoPequeno> snapshotFilaB = estacaoB.getFilaCaminhoesPequenosSnapshot();
+                    for (int i = 0; i < snapshotFilaB.tamanho(); i++) filaBItems.add(snapshotFilaB.obter(i).getPlaca());
+                    listViewEstacaoBFilaCP.setItems(filaBItems);
+                }
+            } else {
+                lblEstacaoBStatus.setText("--");
+                lblEstacaoBCaminhoesFila.setText("0");
+                lblEstacaoBTempoEsperaMedio.setText("0 min");
+                lblEstacaoBLixoTransferido.setText("0 kg");
+                if (lblEstacaoBCaminhaoGrandeInfo != null) lblEstacaoBCaminhaoGrandeInfo.setText("Sem CG");
+                if (listViewEstacaoBFilaCP != null) listViewEstacaoBFilaCP.getItems().clear();
+            }
+        }
     }
+
 
     private void atualizarListaCaminhoesAtividade() {
         if (vboxCaminhoesEmAtividade == null) return;
@@ -734,47 +740,64 @@ public class SimuladorController {
     }
 
     private HBox criarPainelCaminhao(CaminhaoPequeno caminhao) {
-        HBox hbox = new HBox(10);
-        hbox.getStyleClass().add("caminhao-item");
-        hbox.setAlignment(Pos.CENTER_LEFT);
-        javafx.scene.shape.Circle statusIcon = new javafx.scene.shape.Circle(8);
-        statusIcon.getStyleClass().add("status-icon");
+        HBox hbox = new HBox(10); // Espaçamento entre elementos
+        hbox.getStyleClass().add("caminhao-item"); // Para CSS
+        hbox.setAlignment(Pos.CENTER_LEFT); // Alinhamento dos itens
+
+        // Ícone de status (círculo colorido)
+        javafx.scene.shape.Circle statusIcon = new javafx.scene.shape.Circle(8); // Raio do círculo
+        statusIcon.getStyleClass().add("status-icon"); // Para CSS
         switch (caminhao.getStatus()) {
-            case COLETANDO: statusIcon.setStyle("-fx-fill: #4CAF50;"); break;
-            case VIAJANDO_ESTACAO: case RETORNANDO_ZONA: statusIcon.setStyle("-fx-fill: #FFC107;"); break;
-            case NA_FILA: statusIcon.setStyle("-fx-fill: #03A9F4;"); break;
-            case DESCARREGANDO: statusIcon.setStyle("-fx-fill: #9C27B0;"); break;
-            default: statusIcon.setStyle("-fx-fill: #9E9E9E;");
+            case COLETANDO: statusIcon.setStyle("-fx-fill: #4CAF50;"); break; // Verde
+            case VIAJANDO_ESTACAO: case RETORNANDO_ZONA: statusIcon.setStyle("-fx-fill: #FFC107;"); break; // Ambar
+            case NA_FILA: statusIcon.setStyle("-fx-fill: #03A9F4;"); break; // Azul claro
+            case DESCARREGANDO: statusIcon.setStyle("-fx-fill: #9C27B0;"); break; // Roxo
+            default: statusIcon.setStyle("-fx-fill: #9E9E9E;"); // Cinza para outros
         }
-        Label lblPlacaTipo = new Label(String.format("%s (%d Ton)", caminhao.getPlaca(), caminhao.getCapacidade() / 1000));
+
+        // Informações do caminhão (Placa, Tipo, Local, Status)
+        Label lblPlacaTipo = new Label(String.format(brLocale, "%s (%,d Ton)", caminhao.getPlaca(), caminhao.getCapacidade() / 1000));
         lblPlacaTipo.getStyleClass().add("caminhao-placa");
-        String localStatus = "";
+
+        String localStatus = "Local desconhecido";
         if (caminhao.getZonaAtual() != null) {
             localStatus = "Zona: " + caminhao.getZonaAtual().getNome();
         } else if (caminhao.getEstacaoDestino() != null &&
                 (caminhao.getStatus() == StatusCaminhao.VIAJANDO_ESTACAO ||
                         caminhao.getStatus() == StatusCaminhao.NA_FILA ||
-                        caminhao.getStatus() == StatusCaminhao.DESCARREGANDO) ) {
+                        caminhao.getStatus() == StatusCaminhao.DESCARREGANDO)) {
             localStatus = "Estação: " + caminhao.getEstacaoDestino().getNome();
-        } else {
-            localStatus = "Local desconhecido";
         }
         Label lblLocal = new Label(localStatus);
         lblLocal.getStyleClass().add("caminhao-local");
+
         Label lblStatusCaminhao = new Label("Status: " + caminhao.getStatus().toString().replace("_", " "));
         lblStatusCaminhao.getStyleClass().add("caminhao-status-texto");
-        VBox infoLabels = new VBox(2, lblPlacaTipo, new HBox(5,lblLocal, lblStatusCaminhao));
+
+        VBox infoLabels = new VBox(2, lblPlacaTipo, new HBox(5, lblLocal, lblStatusCaminhao)); // HBox para Local e Status na mesma linha
+
+        // Barra de Progresso da Carga
         ProgressBar progressBarCarga = new ProgressBar((double) caminhao.getCargaAtual() / caminhao.getCapacidade());
-        progressBarCarga.setPrefWidth(80);
-        progressBarCarga.setMinWidth(60);
-        Label lblCarga = new Label(String.format("%d/%d kg", caminhao.getCargaAtual(), caminhao.getCapacidade()));
+        progressBarCarga.setPrefWidth(100); // Largura da barra
+        progressBarCarga.setMinWidth(80);
+
+        Label lblCarga = new Label(String.format(brLocale, "%,d/%,d kg", caminhao.getCargaAtual(), caminhao.getCapacidade()));
         lblCarga.getStyleClass().add("caminhao-carga-texto");
-        lblCarga.setMinWidth(Label.USE_PREF_SIZE);
+        lblCarga.setMinWidth(Label.USE_PREF_SIZE); // Para não cortar o texto
+
         HBox cargaBox = new HBox(5, progressBarCarga, lblCarga);
-        cargaBox.setAlignment(Pos.CENTER_RIGHT);
+        cargaBox.setAlignment(Pos.CENTER_LEFT); // Alinha barra e texto
+
+        // Adiciona tudo ao HBox principal
         hbox.getChildren().addAll(statusIcon, infoLabels, cargaBox);
+        // Fazer infoLabels e cargaBox dividirem o espaço restante
+        HBox.setHgrow(infoLabels, javafx.scene.layout.Priority.SOMETIMES);
+        HBox.setHgrow(cargaBox, javafx.scene.layout.Priority.SOMETIMES);
+
+
         return hbox;
     }
+
 
     private String formatarTempo(int minutosTotais) {
         if (minutosTotais < 0) return "00:00";
@@ -795,7 +818,7 @@ public class SimuladorController {
                 areaLog.appendText(timestamp + " - " + mensagem + "\n");
             });
         } else {
-            System.out.println(mensagem);
+            System.out.println(mensagem); // Fallback se areaLog não estiver disponível
         }
     }
 
@@ -805,56 +828,155 @@ public class SimuladorController {
         }
     }
 
-    private void exibirRelatorioFinal() {
-        if (simulador != null && simulador.getEstatisticas() != null) {
-            String relatorio = simulador.getEstatisticas().gerarRelatorio();
-            if (areaRelatorioFinal != null) {
-                areaRelatorioFinal.setText(relatorio);
-                TabPane tabPane = findTabPaneParent(areaRelatorioFinal);
-                if (tabPane != null) {
-                    for (Tab tab : tabPane.getTabs()) {
-                        if (isParent(tab.getContent(), areaRelatorioFinal)) {
-                            tabPane.getSelectionModel().select(tab);
+    // Novo método para popular a aba de relatório gráfico
+    private void exibirRelatorioFinalGrafico() {
+        if (simulador == null || simulador.getEstatisticas() == null) {
+            adicionarLog("Simulador ou estatísticas não disponíveis para gerar relatório gráfico.");
+            // Limpar campos do relatório se estiverem preenchidos de simulação anterior
+            if (barChartLixoPorZona != null) barChartLixoPorZona.getData().clear();
+            if (tableViewMetricasEstacao != null) tableViewMetricasEstacao.getItems().clear();
+            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: N/D");
+            // ... limpar outros labels
+            return;
+        }
+
+        Estatisticas stats = simulador.getEstatisticas();
+        Platform.runLater(() -> {
+            // 1. Popular BarChart Lixo Gerado por Zona
+            if (barChartLixoPorZona != null) {
+                barChartLixoPorZona.getData().clear();
+                XYChart.Series<String, Number> seriesLixoGerado = new XYChart.Series<>();
+                // seriesLixoGerado.setName("Lixo Gerado"); // Legenda não é visível no FXML
+
+                Lista<Estatisticas.EntradaZona> zonasStats = stats.getEstatisticasZonas();
+                String[] nomesZonasOrdenadas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"}; // Ordem desejada
+
+                for (String nomeZona : nomesZonasOrdenadas) {
+                    boolean encontrada = false;
+                    for (int i = 0; i < zonasStats.tamanho(); i++) {
+                        Estatisticas.EntradaZona zonaStat = zonasStats.obter(i);
+                        if (zonaStat.nomeZona.equals(nomeZona)) {
+                            seriesLixoGerado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoGerado));
+                            encontrada = true;
                             break;
                         }
                     }
+                    if (!encontrada) { // Adiciona com valor 0 se não houver dados, para manter a ordem no gráfico
+                        seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, 0));
+                    }
                 }
+                barChartLixoPorZona.getData().add(seriesLixoGerado);
+                // Aplicar estilo às barras
+                for(Node n:barChartLixoPorZona.lookupAll(".chart-bar")) {
+                    n.setStyle("-fx-bar-fill: #2980b9;"); // Cor azul das imagens
+                }
+            }
+
+            // 2. Popular TableView Métricas por Estação
+            if (tableViewMetricasEstacao != null) {
+                ObservableList<MetricaEstacaoModel> metricasEstacaoList = FXCollections.observableArrayList();
+                Lista<Estatisticas.EntradaEstacao> estacoesStats = stats.getEstatisticasEstacoes();
+                for (int i = 0; i < estacoesStats.tamanho(); i++) {
+                    Estatisticas.EntradaEstacao estStat = estacoesStats.obter(i);
+                    metricasEstacaoList.add(new MetricaEstacaoModel(
+                            estStat.nomeEstacao,
+                            estStat.caminhoesPequenosDescarregados,
+                            stats.getTempoMedioEsperaPorEstacao(estStat.nomeEstacao),
+                            estStat.getLixoTransferidoCG()
+                    ));
+                }
+                tableViewMetricasEstacao.setItems(metricasEstacaoList);
+            }
+
+            // 3. Popular Principais Descobertas
+            double eficienciaColeta = stats.calcularPercentualLixoColetado();
+            String eficienciaTexto = String.format(brLocale, "O sistema conseguiu coletar %.2f%% do lixo gerado ", eficienciaColeta);
+            if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0) { // Caso a simulação não tenha rodado ou gerado lixo
+                eficienciaTexto += "(simulação não gerou/coletou lixo significativamente).";
+            } else if (eficienciaColeta == 100.0) {
+                eficienciaTexto += "em todas as cinco zonas, demonstrando excelente capacidade de coleta.";
+            } else if (eficienciaColeta >= 80) {
+                eficienciaTexto += ", indicando uma boa capacidade de coleta.";
             } else {
-                Alert alertRelatorio = new Alert(Alert.AlertType.INFORMATION);
-                alertRelatorio.setTitle("Relatório Final da Simulação");
-                alertRelatorio.setHeaderText("Simulação Concluída");
-                TextArea textAreaRelatorioContent = new TextArea(relatorio);
-                textAreaRelatorioContent.setEditable(false);
-                textAreaRelatorioContent.setWrapText(true);
-                alertRelatorio.getDialogPane().setContent(textAreaRelatorioContent);
-                alertRelatorio.setResizable(true);
-                alertRelatorio.showAndWait();
+                eficienciaTexto += ", o que pode indicar necessidade de otimização na frota de caminhões pequenos ou na distribuição.";
             }
-            adicionarLog("\n========= RELATÓRIO FINAL (disponível na aba/janela de relatório) =========\n");
-        }
+            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: " + eficienciaTexto);
+
+
+            Estatisticas.EntradaZona zonaMaiorGeracao = null;
+            Estatisticas.EntradaZona zonaMenorGeracao = null;
+            Lista<Estatisticas.EntradaZona> zonasStatsList = stats.getEstatisticasZonas();
+
+            if (zonasStatsList != null && !zonasStatsList.estaVazia()) {
+                // Inicializa com a primeira zona, se existir
+                zonaMaiorGeracao = zonasStatsList.obter(0);
+                zonaMenorGeracao = zonasStatsList.obter(0);
+                for (int i = 1; i < zonasStatsList.tamanho(); i++) {
+                    Estatisticas.EntradaZona atual = zonasStatsList.obter(i);
+                    if (atual.lixoGerado > zonaMaiorGeracao.lixoGerado) zonaMaiorGeracao = atual;
+                    if (atual.lixoGerado < zonaMenorGeracao.lixoGerado) zonaMenorGeracao = atual;
+                }
+            }
+
+            if (zonaMaiorGeracao != null && zonaMenorGeracao != null && stats.getLixoTotalGerado() > 0) {
+                double percMaior = ((double) zonaMaiorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
+                double percMenor = ((double) zonaMenorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
+                if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText(String.format(brLocale, "Distribuição de Lixo: A zona %s gerou a maior quantidade de lixo (%,d kg, %.1f%% do total), enquanto a zona %s produziu a menor quantidade (%,d kg, %.1f%% do total).",
+                        zonaMaiorGeracao.nomeZona, zonaMaiorGeracao.lixoGerado, percMaior,
+                        zonaMenorGeracao.nomeZona, zonaMenorGeracao.lixoGerado, percMenor));
+            } else {
+                if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText("Distribuição de Lixo: Dados insuficientes ou lixo não gerado para análise detalhada.");
+            }
+
+            double tempoMedioGlobalEsperaEstacoes = stats.calcularTempoMedioEsperaFilaPequenos();
+            if (lblGargalosSistema != null) lblGargalosSistema.setText(String.format(brLocale, "Gargalos no Sistema: O tempo médio de espera nas estações (global: %.1f minutos) pode indicar o nível de congestionamento nas estações de transferência.", tempoMedioGlobalEsperaEstacoes));
+
+
+            if (stats.getCaminhoesGrandesAdicionados() > 0) {
+                if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText(String.format(brLocale, "Otimização da Frota: O sistema precisou adicionar %d caminhões grandes além da frota inicial para atender à demanda.", stats.getCaminhoesGrandesAdicionados()));
+            } else {
+                if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText("Otimização da Frota: A frota inicial de caminhões grandes foi suficiente para a demanda observada, não havendo adições durante a simulação.");
+            }
+
+            // 4. Popular Conclusão
+            int numCGNecessarios = stats.calcularEstimativaCaminhoesGrandesNecessarios();
+            String conclusaoTexto1 = String.format(brLocale,
+                    "A simulação demonstra que o sistema de coleta de lixo de Teresina, com a configuração testada, apresentou uma eficiência de %.2f%% na coleta. ", eficienciaColeta);
+            conclusaoTexto1 += "O principal fator limitante para o transporte final ao aterro sanitário frequentemente reside no número e na gestão dos caminhões grandes disponíveis. ";
+            if (stats.getCaminhoesGrandesAdicionados() > 0) {
+                conclusaoTexto1 += String.format(brLocale, "Na simulação atual, %d caminhões grandes foram adicionados dinamicamente, indicando uma demanda que excedeu a capacidade inicial da frota de transporte.", stats.getCaminhoesGrandesAdicionados());
+            } else if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0 && stats.getLixoTotalTransportado() == 0) { // Se nada aconteceu
+                conclusaoTexto1 += "A simulação não apresentou dados de coleta para avaliar a frota de caminhões grandes.";
+            }
+            else {
+                conclusaoTexto1 += "A frota inicial de caminhões grandes mostrou-se adequada durante esta simulação.";
+            }
+            if (lblConclusaoTexto1 != null) lblConclusaoTexto1.setText(conclusaoTexto1);
+
+            if (lblConclusaoCaminhoesNecessarios != null) lblConclusaoCaminhoesNecessarios.setText(String.format(brLocale, "%d Caminhões de %d Toneladas", numCGNecessarios, CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000));
+
+            if (lblConclusaoTexto2 != null) lblConclusaoTexto2.setText(String.format(brLocale, "Esta conclusão considera a quantidade total de lixo coletado diariamente nas cinco zonas e a capacidade de transporte dos caminhões grandes. Com uma frota mínima de %d caminhões grandes, o sistema pode operar com eficiência, minimizando tempos de espera nas estações de transferência e garantindo o transporte adequado do lixo coletado.", numCGNecessarios));
+
+            // Mudar para a aba de relatório
+            if (tabPanePrincipal != null && tabRelatorioFinal != null) {
+                tabPanePrincipal.getSelectionModel().select(tabRelatorioFinal);
+            }
+        });
     }
 
-    private TabPane findTabPaneParent(javafx.scene.Node node) {
-        if (node == null) return null;
-        javafx.scene.Parent parent = node.getParent();
-        while (parent != null) {
-            if (parent instanceof TabPane) {
-                return (TabPane) parent;
-            }
-            parent = parent.getParent();
-        }
-        return null;
+    private void mostrarAlertaErro(String titulo, String cabecalho, String conteudo) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(titulo);
+        alert.setHeaderText(cabecalho);
+        alert.setContentText(conteudo);
+        alert.showAndWait();
     }
 
-    private boolean isParent(javafx.scene.Node potentialParent, javafx.scene.Node potentialChild) {
-        if (potentialChild == null || potentialParent == null) return false;
-        javafx.scene.Parent p = potentialChild.getParent();
-        while (p != null) {
-            if (p.equals(potentialParent)) {
-                return true;
-            }
-            p = p.getParent();
-        }
-        return false;
+    private void mostrarAlertaInfo(String titulo, String cabecalho, String conteudo) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(cabecalho);
+        alert.setContentText(conteudo);
+        alert.showAndWait();
     }
 }

@@ -2,9 +2,9 @@ import java.io.*;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Random;
-import java.nio.file.Files; // Adicionado para operações de arquivo/diretório
-import java.nio.file.Paths;  // Adicionado para operações de arquivo/diretório
-import java.nio.file.Path;   // Adicionado para operações de arquivo/diretório
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 
 import Estruturas.Lista;
 import caminhoes.CaminhaoPequeno;
@@ -18,7 +18,7 @@ import estacoes.ResultadoProcessamentoFila;
 import caminhoes.CaminhaoGrandePadrao;
 
 public class Simulador implements Serializable {
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 2L; // Mantido ou incrementado conforme necessidade
 
     // --- Constantes de Configuração de Tempo ---
     private static final int MINUTOS_EM_UM_DIA = 24 * 60;
@@ -30,79 +30,65 @@ public class Simulador implements Serializable {
     private static final int MAX_VIAGEM_FORA_PICO_MIN = 45;
     private static final int MIN_VIAGEM_PICO_MIN = 30;
     private static final int MAX_VIAGEM_PICO_MIN = 90;
-    private static final int INTERVALO_RELATORIO_MIN = 60;
-    private static final int INTERVALO_TIMER_MS = 50;
+    private static final int INTERVALO_RELATORIO_MIN = 60; // Intervalo para imprimir relatório no console
+    private static final int INTERVALO_TIMER_MS = 50; // Intervalo do timer da simulação (GUI pode precisar de < 1000)
 
     // --- Atributos da Simulação ---
-    private transient Timer timer;
+    private transient Timer timer; // transient para não ser serializado
     private int tempoSimulado = 0; // Acumula minutos totais da simulação
     private boolean pausado = false;
-    private transient Random random;
-    private Estatisticas estatisticas = new Estatisticas();
+    private transient Random random; // transient
+    private Estatisticas estatisticas = new Estatisticas(); // Deve ser serializável
 
     // Atributos para o sistema de distribuição
-    private MapaUrbano mapaUrbano;
-    private DistribuicaoCaminhoes distribuicaoCaminhoes;
+    private MapaUrbano mapaUrbano; // Deve ser serializável
+    private DistribuicaoCaminhoes distribuicaoCaminhoes; // Deve ser serializável
 
     // Novos atributos para a garagem central e configurações de distribuição
-    private GaragemCentral garagemCentral;
-    private boolean usarGaragemCentral = true; // Por padrão, usar garagem central
-    private boolean garantirDistribuicaoMinima = true; // Garantir pelo menos um caminhão por zona
-    private int caminhoesPorZonaMinimo = 1; // Mínimo de caminhões por zona
-    private int limiteViagensDiarias = 10; // Limite configurável (usando o padrão da classe CaminhaoPequeno)
+    private GaragemCentral garagemCentral; // Deve ser serializável
+    private boolean usarGaragemCentral = true;
+    private boolean garantirDistribuicaoMinima = true;
+    private int caminhoesPorZonaMinimo = 1;
+    private int limiteViagensDiarias = 10; // Limite configurável
 
-    // --- Listas Principais de Entidades ---
+    // --- Listas Principais de Entidades (Devem ser serializáveis se a Lista for) ---
     private Lista<CaminhaoPequeno> todosOsCaminhoesPequenos;
     private Lista<CaminhaoGrande> listaCaminhoesGrandesDisponiveis;
     private Lista<ZonaUrbana> listaZonas;
     private Lista<EstacaoTransferencia> listaEstacoes;
 
     // Contadores para caminhões grandes
-    private int totalCaminhoesGrandesCriados = 0; // Total de CGs que fazem/fizeram parte da frota
+    private int totalCaminhoesGrandesCriados = 0;
     private int caminhoesGrandesEmUso = 0;
 
     // Parâmetros configuráveis
     private int toleranciaCaminhoesGrandes = CaminhaoGrandePadrao.TOLERANCIA_ESPERA_PADRAO_MINUTOS;
-    private int intervaloEstatisticas = INTERVALO_RELATORIO_MIN;
+    private int intervaloEstatisticas = INTERVALO_RELATORIO_MIN; // Para relatório no console
 
     public Simulador() {
         this.todosOsCaminhoesPequenos = new Lista<>();
         this.listaCaminhoesGrandesDisponiveis = new Lista<>();
         this.listaZonas = new Lista<>();
         this.listaEstacoes = new Lista<>();
-        this.random = new Random();
-
-        // Inicializa o mapa urbano
-        this.mapaUrbano = new MapaUrbano();
-
-        // Inicializa configurações da distribuição
-        this.usarGaragemCentral = true;
-        this.garantirDistribuicaoMinima = true;
-        this.caminhoesPorZonaMinimo = 1;
-        this.limiteViagensDiarias = 10; // Valor padrão, agora configurável
+        this.random = new Random(); // Será recriado se desserializado
+        this.mapaUrbano = new MapaUrbano(); // Inicializa here
+        // distribuidor e garagem são inicializados depois, com base nas zonas e config
     }
 
-    // --- Método para inicializar a garagem central ---
     public void inicializarGaragemCentral() {
         if (this.mapaUrbano == null) {
             this.mapaUrbano = new MapaUrbano();
         }
         this.garagemCentral = new GaragemCentral("Garagem Central", this.mapaUrbano);
 
-        // Configura o distribuidor
         if (this.distribuicaoCaminhoes != null) {
             this.garagemCentral.setDistribuidor(this.distribuicaoCaminhoes);
-
-            if (this.garantirDistribuicaoMinima) {
-                this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(true);
-                this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
-            }
+            // As configurações de garantirDistribuicaoMinima e caminhoesPorZonaMinimo
+            // já são passadas para o distribuidor quando ele é criado ou quando as
+            // zonas são setadas, e o distribuidor as usa.
         }
-
-        // Define o limite de viagens diárias
         this.garagemCentral.setLimiteViagensDiarias(this.limiteViagensDiarias);
 
-        // Transfere caminhões ociosos para a garagem
         if (todosOsCaminhoesPequenos != null) {
             for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
                 CaminhaoPequeno cp = todosOsCaminhoesPequenos.obter(i);
@@ -111,25 +97,19 @@ public class Simulador implements Serializable {
                 }
             }
         }
-
-        System.out.println("Garagem Central inicializada. Configurações: " +
-                "Garantir distribuição mínima=" + garantirDistribuicaoMinima +
-                ", Mínimo por zona=" + caminhoesPorZonaMinimo +
-                ", Limite viagens=" + limiteViagensDiarias);
+        System.out.println("Garagem Central inicializada.");
     }
 
-    // --- Setters para Configuração ---
     public void setListaCaminhoesPequenos(Lista<CaminhaoPequeno> lista) {
         this.todosOsCaminhoesPequenos = lista;
         if (this.todosOsCaminhoesPequenos != null) {
             for (int i = 0; i < this.todosOsCaminhoesPequenos.tamanho(); i++) {
                 CaminhaoPequeno cp = this.todosOsCaminhoesPequenos.obter(i);
-                // Ao setar a lista, garante que os caminhões estejam em um estado inicial consistente
                 if (cp.getStatus() != StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
                     cp.setStatus(StatusCaminhao.OCIOSO);
                 }
-                cp.setTempoChegadaNaFila(-1); // Reseta informação de fila
-                cp.setLimiteViagensDiarias(this.limiteViagensDiarias); // Define o limite configurado
+                cp.setTempoChegadaNaFila(-1);
+                cp.setLimiteViagensDiarias(this.limiteViagensDiarias);
             }
         }
     }
@@ -137,25 +117,25 @@ public class Simulador implements Serializable {
     public void setListaCaminhoesGrandes(Lista<CaminhaoGrande> lista) {
         this.listaCaminhoesGrandesDisponiveis = lista;
         if (lista != null) {
-            this.totalCaminhoesGrandesCriados = lista.tamanho(); // Define o número inicial de CGs na frota
+            this.totalCaminhoesGrandesCriados = lista.tamanho();
         } else {
             this.totalCaminhoesGrandesCriados = 0;
-            this.listaCaminhoesGrandesDisponiveis = new Lista<>(); // Garante que não seja nulo
+            this.listaCaminhoesGrandesDisponiveis = new Lista<>();
         }
     }
 
     public void setListaZonas(Lista<ZonaUrbana> lista) {
         this.listaZonas = lista;
-
-        // Inicializa o distribuidor de caminhões quando as zonas são definidas
         if (this.mapaUrbano != null && this.listaZonas != null && !this.listaZonas.estaVazia()) {
             this.distribuicaoCaminhoes = new DistribuicaoCaminhoes(this.mapaUrbano, this.listaZonas);
-
-            // Configura o distribuidor com as novas configurações
-            if (this.distribuicaoCaminhoes != null) {
-                this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(this.garantirDistribuicaoMinima);
-                this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
+            // Aplicar configurações ao novo distribuidor
+            this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(this.garantirDistribuicaoMinima);
+            this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
+            if(this.garagemCentral != null) { // Se garagem já existe, atualiza seu distribuidor
+                this.garagemCentral.setDistribuidor(this.distribuicaoCaminhoes);
             }
+        } else {
+            this.distribuicaoCaminhoes = null; // Se não há zonas, não há distribuidor
         }
     }
 
@@ -168,13 +148,11 @@ public class Simulador implements Serializable {
             throw new IllegalArgumentException("A tolerância deve ser pelo menos 1 minuto.");
         }
         this.toleranciaCaminhoesGrandes = tolerancia;
-        // Atualiza para caminhões grandes disponíveis
         if (listaCaminhoesGrandesDisponiveis != null) {
             for (int i = 0; i < listaCaminhoesGrandesDisponiveis.tamanho(); i++) {
                 listaCaminhoesGrandesDisponiveis.obter(i).setToleranciaEspera(tolerancia);
             }
         }
-        // Atualiza para caminhões grandes já em uso nas estações
         if (listaEstacoes != null) {
             for (int i = 0; i < listaEstacoes.tamanho(); i++) {
                 if (listaEstacoes.obter(i) instanceof EstacaoPadrao) {
@@ -193,15 +171,12 @@ public class Simulador implements Serializable {
         this.intervaloEstatisticas = intervalo;
     }
 
-    // --- Setters para as novas configurações ---
     public void setUsarGaragemCentral(boolean usarGaragemCentral) {
         this.usarGaragemCentral = usarGaragemCentral;
     }
 
     public void setGarantirDistribuicaoMinima(boolean garantirDistribuicaoMinima) {
         this.garantirDistribuicaoMinima = garantirDistribuicaoMinima;
-
-        // Atualiza a configuração no distribuidor, se existir
         if (distribuicaoCaminhoes != null) {
             distribuicaoCaminhoes.setGarantirDistribuicaoMinima(garantirDistribuicaoMinima);
         }
@@ -212,8 +187,6 @@ public class Simulador implements Serializable {
             throw new IllegalArgumentException("O número mínimo de caminhões por zona deve ser pelo menos 1");
         }
         this.caminhoesPorZonaMinimo = caminhoesPorZonaMinimo;
-
-        // Atualiza a configuração no distribuidor, se existir
         if (distribuicaoCaminhoes != null) {
             distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(caminhoesPorZonaMinimo);
         }
@@ -224,21 +197,18 @@ public class Simulador implements Serializable {
             throw new IllegalArgumentException("O limite de viagens diárias deve ser pelo menos 1");
         }
         this.limiteViagensDiarias = limiteViagensDiarias;
-
-        // Atualiza o limite na garagem central, se existir
         if (garagemCentral != null) {
             garagemCentral.setLimiteViagensDiarias(limiteViagensDiarias);
         }
-
-        // Atualiza também todos os caminhões, caso a garagem não exista ou não esteja em uso
-        if (!usarGaragemCentral && todosOsCaminhoesPequenos != null) {
+        // Atualiza para todos os caminhões existentes também, caso a garagem não os gerencie diretamente
+        // ou para garantir consistência se a config da garagem mudar em tempo de execução.
+        if (todosOsCaminhoesPequenos != null) {
             for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
                 todosOsCaminhoesPequenos.obter(i).setLimiteViagensDiarias(limiteViagensDiarias);
             }
         }
     }
 
-    // --- Controle da Simulação ---
     public void iniciar() {
         if (timer != null) {
             System.out.println("Simulação já iniciada. Use 'encerrar' primeiro para reiniciar.");
@@ -247,48 +217,62 @@ public class Simulador implements Serializable {
         if (listaZonas == null || listaZonas.estaVazia() ||
                 listaEstacoes == null || listaEstacoes.estaVazia() ||
                 todosOsCaminhoesPequenos == null || todosOsCaminhoesPequenos.estaVazia()) {
-            System.err.println("ERRO: Simulação não pode iniciar sem Zonas, Estações e Caminhões Pequenos configurados!");
-            return;
+            String erroMsg = "ERRO: Simulação não pode iniciar. Verifique se há:\n" +
+                    " - Zonas configuradas: " + (listaZonas != null && !listaZonas.estaVazia()) + "\n" +
+                    " - Estações configuradas: " + (listaEstacoes != null && !listaEstacoes.estaVazia()) + "\n" +
+                    " - Caminhões Pequenos configurados: " + (todosOsCaminhoesPequenos != null && !todosOsCaminhoesPequenos.estaVazia());
+            System.err.println(erroMsg);
+            throw new IllegalStateException("Configuração incompleta para iniciar a simulação. Detalhes:\n" + erroMsg);
         }
+
 
         System.out.println("Iniciando Simulação...");
         pausado = false;
-        tempoSimulado = 0; // Reseta o tempo total da simulação
+        tempoSimulado = 0;
         if (random == null) random = new Random();
 
+        // Reinicializa o estado para uma nova simulação
         caminhoesGrandesEmUso = 0;
-        estatisticas.resetar();
+        estatisticas.resetar(); // Limpa estatísticas anteriores
+        // Registrar o número inicial de caminhões grandes na frota (disponíveis + em uso se houvesse)
         // totalCaminhoesGrandesCriados já foi setado por setListaCaminhoesGrandes
         estatisticas.registrarTotalInicialCaminhoesGrandes(this.totalCaminhoesGrandesCriados);
 
+
         // Inicializa garagem central se estiver habilitada e não existir ainda
-        if (this.usarGaragemCentral && this.garagemCentral == null) {
-            inicializarGaragemCentral();
+        // Ou reconfigura se já existir, para garantir que use o distribuidor correto
+        if (this.usarGaragemCentral) {
+            if(this.garagemCentral == null) inicializarGaragemCentral();
+            else { // Garagem já existe, apenas atualiza o distribuidor e limite de viagens
+                if(this.distribuicaoCaminhoes != null) this.garagemCentral.setDistribuidor(this.distribuicaoCaminhoes);
+                this.garagemCentral.setLimiteViagensDiarias(this.limiteViagensDiarias);
+            }
         }
 
-        reiniciarViagensDiariasTodosCaminhoesPequenos(); // Garante que todos comecem o dia com viagens zeradas
-        distribuirCaminhoesOciososParaColeta(); // Distribui os que estão ociosos
 
-        timer = new Timer(true); // Daemon thread
+        reiniciarViagensDiariasTodosCaminhoesPequenos();
+        distribuirCaminhoesOciososParaColeta();
+
+        timer = new Timer(true); // Daemon thread para não impedir o fechamento da aplicação
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (!pausado) {
                     try {
                         int diaAnteriorSimulado = tempoSimulado / MINUTOS_EM_UM_DIA;
-                        tempoSimulado = (tempoSimulado + 1); // Avança 1 minuto
+                        tempoSimulado = (tempoSimulado + 1);
                         int diaAtualSimulado = tempoSimulado / MINUTOS_EM_UM_DIA;
 
-                        if (diaAtualSimulado > diaAnteriorSimulado) { // Houve uma virada de dia
+                        if (diaAtualSimulado > diaAnteriorSimulado) {
                             System.out.printf("\n--- TRANSIÇÃO PARA O DIA %d (Tempo Simulado Total: %d min) ---\n", diaAtualSimulado + 1, tempoSimulado);
                             reiniciarViagensDiariasTodosCaminhoesPequenos();
-                            distribuirCaminhoesOciososParaColeta();
+                            distribuirCaminhoesOciososParaColeta(); // Redistribui no início de cada dia
                         }
                         atualizarSimulacao();
                     } catch (Exception e) {
                         System.err.println("ERRO CRÍTICO NO LOOP DA SIMULAÇÃO! Tempo: " + formatarTempo(tempoSimulado));
                         e.printStackTrace();
-                        pausar();
+                        pausar(); // Pausa para evitar erros contínuos
                     }
                 }
             }
@@ -311,16 +295,15 @@ public class Simulador implements Serializable {
     public void encerrar() {
         System.out.println("Encerrando simulação...");
         if (timer != null) { timer.cancel(); timer = null; }
-        pausado = true;
+        pausado = true; // Garante que não haja mais atualizações
+        // Gerar e salvar relatório textual ao encerrar
         try {
-            // Definir o diretório e o nome do arquivo
-            String diretorioRelatorios = "Relatorios";
+            String diretorioRelatorios = "Relatorios"; // Pasta para salvar os relatórios
             String nomeBaseArquivo = "relatorio_simulacao_" + System.currentTimeMillis() + ".txt";
             Path caminhoDiretorio = Paths.get(diretorioRelatorios);
             Path caminhoArquivo = Paths.get(diretorioRelatorios, nomeBaseArquivo);
             String nomeArquivoFinal = caminhoArquivo.toString();
 
-            // Criar o diretório se não existir
             if (!Files.exists(caminhoDiretorio)) {
                 try {
                     Files.createDirectories(caminhoDiretorio);
@@ -332,19 +315,18 @@ public class Simulador implements Serializable {
                 } catch (SecurityException se) {
                     System.err.println("Erro de segurança ao tentar criar o diretório '" + diretorioRelatorios + "': " + se.getMessage());
                     System.err.println("O relatório será salvo no diretório atual da aplicação.");
-                    nomeArquivoFinal = nomeBaseArquivo; // Fallback para o diretório atual
+                    nomeArquivoFinal = nomeBaseArquivo;
                 }
             }
 
-            System.out.println("\n" + estatisticas.gerarRelatorio()); // Imprime no console (que é a JTextArea)
+            System.out.println("\n" + estatisticas.gerarRelatorio()); // Imprime no console (que é a JTextArea na GUI)
             estatisticas.salvarRelatorio(nomeArquivoFinal); // Salva em arquivo no diretório
 
         } catch (IOException e) {
             System.err.println("Erro ao salvar relatório final: " + e.getMessage());
-        } catch (SecurityException se) { // Captura SecurityException aqui também, caso ocorra no salvarRelatorio.
+        } catch (SecurityException se) {
             System.err.println("Erro de segurança ao salvar relatório: " + se.getMessage());
-            // Opcional: fallback para salvar no diretório atual em caso de erro de segurança ao salvar
-            try {
+            try { // Fallback para salvar no diretório atual em caso de erro de segurança
                 String nomeBaseArquivoFallback = "relatorio_simulacao_" + System.currentTimeMillis() + ".txt";
                 System.out.println("\n" + estatisticas.gerarRelatorio());
                 estatisticas.salvarRelatorio(nomeBaseArquivoFallback);
@@ -359,61 +341,109 @@ public class Simulador implements Serializable {
 
     private void distribuirCaminhoesOciososParaColeta() {
         if (listaZonas == null || listaZonas.estaVazia()) {
+            //System.out.println("INFO: Nenhuma zona para distribuir caminhões.");
             return;
         }
 
         int distribuidos = 0;
 
-        // Usa a garagem central se estiver configurada
         if (usarGaragemCentral && garagemCentral != null) {
+            if (distribuicaoCaminhoes == null && this.listaZonas != null && !this.listaZonas.estaVazia()) {
+                // Garante que o distribuidor existe se as zonas foram setadas depois da garagem
+                this.distribuicaoCaminhoes = new DistribuicaoCaminhoes(this.mapaUrbano, this.listaZonas);
+                this.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(this.garantirDistribuicaoMinima);
+                this.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(this.caminhoesPorZonaMinimo);
+                this.garagemCentral.setDistribuidor(this.distribuicaoCaminhoes);
+            }
             distribuidos = garagemCentral.distribuirCaminhoesParaZonas(listaZonas, distribuicaoCaminhoes);
         }
-        // Caso contrário, usa o código antigo
+        // Caso contrário, usa o código antigo (distribuidor direto ou aleatório)
         else if (distribuicaoCaminhoes != null) {
-            // O código existente para usar o distribuidor
             distribuidos = distribuicaoCaminhoes.distribuirCaminhoes(todosOsCaminhoesPequenos, listaZonas);
-        } else {
-            // Código existente de distribuição aleatória
-            for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
-                CaminhaoPequeno caminhao = todosOsCaminhoesPequenos.obter(i);
-                if (caminhao.getStatus() == StatusCaminhao.OCIOSO) {
-                    int idxZona = random.nextInt(listaZonas.tamanho());
-                    ZonaUrbana zonaDestino = listaZonas.obter(idxZona);
-                    caminhao.definirDestino(zonaDestino);
-                    caminhao.setStatus(StatusCaminhao.COLETANDO);
-                    distribuidos++;
+        } else { // Fallback para distribuição aleatória se tudo mais falhar
+            if (todosOsCaminhoesPequenos != null && !todosOsCaminhoesPequenos.estaVazia()) {
+                for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                    CaminhaoPequeno caminhao = todosOsCaminhoesPequenos.obter(i);
+                    if (caminhao.getStatus() == StatusCaminhao.OCIOSO) {
+                        int idxZona = random.nextInt(listaZonas.tamanho());
+                        ZonaUrbana zonaDestino = listaZonas.obter(idxZona);
+                        caminhao.definirDestino(zonaDestino);
+                        caminhao.setStatus(StatusCaminhao.COLETANDO);
+                        distribuidos++;
+                    }
                 }
             }
         }
 
         if (distribuidos > 0) {
-            String metodo = usarGaragemCentral ? "garagem central" :
+            String metodo = usarGaragemCentral && garagemCentral != null ? "garagem central" :
                     (distribuicaoCaminhoes != null ? "distribuição inteligente" : "distribuição aleatória");
             System.out.println(distribuidos + " caminhões pequenos ociosos enviados para coleta usando " + metodo);
+        } else if (todosOsCaminhoesPequenos != null && todosOsCaminhoesPequenos.tamanho() > 0) {
+            //System.out.println("INFO: Nenhum caminhão ocioso para distribuir ou nenhuma zona precisando.");
         }
     }
 
     public void gravar(String caminhoArquivo) throws IOException {
-        boolean estavaPausado = this.pausado; pausar();
+        boolean estavaPausado = this.pausado;
+        if (!estavaPausado && timer != null) pausar(); // Pausa antes de salvar se estava rodando
+
         System.out.println("Salvando estado da simulação em " + caminhoArquivo + "...");
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(caminhoArquivo))) {
-            oos.writeObject(this); System.out.println("Simulação salva com sucesso.");
-        } finally { if (!estavaPausado && timer != null) { continuarSimulacao(); } } // Só continua se timer ainda existe
+            oos.writeObject(this);
+            System.out.println("Simulação salva com sucesso.");
+        } finally {
+            // Retoma apenas se estava rodando e o timer ainda existe (não foi encerrado)
+            if (!estavaPausado && timer != null) {
+                continuarSimulacao();
+            }
+        }
     }
 
     public static Simulador carregar(String caminhoArquivo) throws IOException, ClassNotFoundException {
         System.out.println("Carregando estado da simulação de " + caminhoArquivo + "...");
         Simulador sim = null;
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(caminhoArquivo))) {
-            sim = (Simulador) ois.readObject(); sim.timer = null; sim.pausado = true; sim.random = new Random();
+            sim = (Simulador) ois.readObject();
+            // Recriar componentes transient
+            sim.timer = null; // Timer será recriado se iniciar
+            sim.pausado = true; // Simulação carregada fica pausada
+            sim.random = new Random();
+            // Garante que listas não sejam nulas pós-desserialização (caso de versões antigas)
             if (sim.todosOsCaminhoesPequenos == null) sim.todosOsCaminhoesPequenos = new Lista<>();
             if (sim.listaCaminhoesGrandesDisponiveis == null) sim.listaCaminhoesGrandesDisponiveis = new Lista<>();
-            // Se houver outros atributos que precisam de inicialização pós-deserialização, adicione aqui.
-            System.out.println("Simulação carregada. Está pausada.");
+            if (sim.listaZonas == null) sim.listaZonas = new Lista<>();
+            if (sim.listaEstacoes == null) sim.listaEstacoes = new Lista<>();
+            if (sim.estatisticas == null) sim.estatisticas = new Estatisticas();
+            if (sim.mapaUrbano == null) sim.mapaUrbano = new MapaUrbano(); // Recria se nulo
+            // Recria o distribuidor com base nas zonas carregadas
+            if (sim.listaZonas != null && !sim.listaZonas.estaVazia()) {
+                sim.distribuicaoCaminhoes = new DistribuicaoCaminhoes(sim.mapaUrbano, sim.listaZonas);
+                sim.distribuicaoCaminhoes.setGarantirDistribuicaoMinima(sim.garantirDistribuicaoMinima);
+                sim.distribuicaoCaminhoes.setCaminhoesPorZonaMinimo(sim.caminhoesPorZonaMinimo);
+            }
+            // Recria garagem se usarGaragemCentral é true
+            if (sim.usarGaragemCentral) {
+                sim.garagemCentral = new GaragemCentral("Garagem Central (Carregada)", sim.mapaUrbano);
+                if(sim.distribuicaoCaminhoes != null) sim.garagemCentral.setDistribuidor(sim.distribuicaoCaminhoes);
+                sim.garagemCentral.setLimiteViagensDiarias(sim.limiteViagensDiarias);
+                // Adicionar caminhões ociosos à garagem recriada
+                if (sim.todosOsCaminhoesPequenos != null) {
+                    for (int i = 0; i < sim.todosOsCaminhoesPequenos.tamanho(); i++) {
+                        CaminhaoPequeno cp = sim.todosOsCaminhoesPequenos.obter(i);
+                        if (cp.getStatus() == StatusCaminhao.OCIOSO) {
+                            sim.garagemCentral.adicionarCaminhao(cp);
+                        }
+                    }
+                }
+            }
+
+            System.out.println("Simulação carregada. Está pausada. Tempo simulado: " + sim.formatarTempo(sim.tempoSimulado));
         }
         if (sim == null) { throw new IOException("Falha ao carregar Simulador: objeto nulo."); }
         return sim;
     }
+
 
     private boolean isHorarioDePico(int tempoAtualMinutosNoDia) {
         return (tempoAtualMinutosNoDia >= PICO_MANHA_INICIO_MIN && tempoAtualMinutosNoDia <= PICO_MANHA_FIM_MIN) ||
@@ -422,13 +452,13 @@ public class Simulador implements Serializable {
 
     private int calcularTempoViagemPequeno() {
         int min, max;
-        int tempoNoDia = tempoSimulado % MINUTOS_EM_UM_DIA; // Usa o tempo atual no dia para calcular o pico
+        int tempoNoDia = tempoSimulado % MINUTOS_EM_UM_DIA;
         if (isHorarioDePico(tempoNoDia)) {
             min = MIN_VIAGEM_PICO_MIN; max = MAX_VIAGEM_PICO_MIN;
         } else {
             min = MIN_VIAGEM_FORA_PICO_MIN; max = MAX_VIAGEM_FORA_PICO_MIN;
         }
-        if (min >= max) return min; // Evita erro com nextInt se min == max
+        if (min >= max) return min;
         return random.nextInt(max - min + 1) + min;
     }
 
@@ -437,8 +467,8 @@ public class Simulador implements Serializable {
         CaminhaoGrande novoCaminhao = new CaminhaoGrandePadrao(this.toleranciaCaminhoesGrandes);
         if (listaCaminhoesGrandesDisponiveis == null) listaCaminhoesGrandesDisponiveis = new Lista<>();
         listaCaminhoesGrandesDisponiveis.adicionar(novoCaminhao);
-        totalCaminhoesGrandesCriados++; // Incrementa o contador da frota total
-        estatisticas.registrarNovoCaminhaoGrande(); // Notifica estatísticas
+        totalCaminhoesGrandesCriados++;
+        estatisticas.registrarNovoCaminhaoGrande();
         System.out.println("Novo caminhão grande adicionado! Total na Frota: " + totalCaminhoesGrandesCriados +
                 ", Disponíveis: " + listaCaminhoesGrandesDisponiveis.tamanho());
     }
@@ -461,7 +491,7 @@ public class Simulador implements Serializable {
             }
             // Atualiza o tempo sem coleta para o sistema de distribuição inteligente
             if (distribuicaoCaminhoes != null) {
-                distribuicaoCaminhoes.incrementarTempoSemColeta(1); // 1 minuto por iteração
+                distribuicaoCaminhoes.incrementarTempoSemColeta(60); // Incrementa 60 minutos (1 hora)
             }
         }
 
@@ -470,18 +500,19 @@ public class Simulador implements Serializable {
 
         estatisticas.atualizarMaxCaminhoesGrandesEmUso(caminhoesGrandesEmUso);
         if (tempoNoDia % intervaloEstatisticas == 0 && this.tempoSimulado != 0) { // Evita relatório no tempo 0
-            imprimirRelatorioHorario();
+            imprimirRelatorioHorario(); // Imprime relatório textual no console (log da GUI)
         }
     }
 
     private void reiniciarViagensDiariasTodosCaminhoesPequenos() {
-        // Se estiver usando garagem central, delega a ela
         if (usarGaragemCentral && garagemCentral != null) {
             garagemCentral.reiniciarViagensDiarias();
         }
-        // Caso contrário, usa o código original
-        else if (todosOsCaminhoesPequenos != null) {
+        // Mesmo se usar garagem, percorre todos para garantir que qualquer caminhão fora da garagem também seja resetado
+        if (todosOsCaminhoesPequenos != null) {
             for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
+                // A garagem já deve ter tratado os seus. Aqui trata os que podem estar em zonas/estações.
+                // O método reiniciarViagensDiarias do caminhão já verifica se estava INATIVO_LIMITE_VIAGENS.
                 todosOsCaminhoesPequenos.obter(i).reiniciarViagensDiarias();
             }
         }
@@ -505,16 +536,15 @@ public class Simulador implements Serializable {
                 case COLETANDO:
                     processarCaminhaoEmColeta(caminhao);
                     break;
-                case VIAJANDO_ESTACAO: // Caminhão indo para estação
-                case RETORNANDO_ZONA:  // Caminhão voltando da estação para zona
+                case VIAJANDO_ESTACAO:
+                case RETORNANDO_ZONA:
                     processarCaminhaoEmViagem(caminhao);
                     break;
                 case NA_FILA:
                     // O caminhão está na fila da estação. A estação o processará.
                     break;
                 case DESCARREGANDO:
-                    // Este status é gerenciado pela Estacao enquanto o caminhão está nela.
-                    // O Simulador não precisa agir diretamente sobre ele aqui.
+                    // Este status é gerenciado pela Estacao.
                     break;
                 default:
                     System.err.println("ALERTA SIM: Caminhão " + caminhao.getPlaca() + " em status desconhecido/não tratado: " + statusAtual);
@@ -527,19 +557,18 @@ public class Simulador implements Serializable {
         ZonaUrbana zona = caminhao.getZonaAtual();
         if (zona == null) {
             System.err.println("ERRO SIM CRÍTICO: CP " + caminhao.getPlaca() + " em COLETANDO mas zonaAtual é null! Definindo como OCIOSO.");
-            caminhao.setStatus(StatusCaminhao.OCIOSO); // Medida de segurança
+            caminhao.setStatus(StatusCaminhao.OCIOSO);
             return;
         }
 
         if (!caminhao.estaCheio()) {
             int lixoDisponivel = zona.getLixoAcumulado();
             if (lixoDisponivel > 0) {
-                int lixoColetado = caminhao.coletar(lixoDisponivel);
+                int lixoColetado = caminhao.coletar(lixoDisponivel); // coletar retorna o quanto coletou
                 if (lixoColetado > 0) {
-                    zona.coletarLixo(lixoColetado);
+                    zona.coletarLixo(lixoColetado); // Remove da zona o que foi efetivamente coletado pelo caminhão
                     estatisticas.registrarColetaLixo(zona.getNome(), lixoColetado);
 
-                    // Registra a coleta para o sistema de distribuição inteligente
                     if (distribuicaoCaminhoes != null) {
                         distribuicaoCaminhoes.registrarColetaEmZona(zona.getNome());
                     }
@@ -550,15 +579,16 @@ public class Simulador implements Serializable {
         if (caminhao.estaCheio()) {
             if (listaEstacoes == null || listaEstacoes.estaVazia()) {
                 System.err.println("AVISO SIM: CP " + caminhao.getPlaca() + " está cheio, mas não há estações para descarregar!");
-                return; // Caminhão fica cheio na zona, não pode ir a lugar nenhum
+                return;
             }
 
             EstacaoTransferencia melhorEstacao = null;
             int menorFila = Integer.MAX_VALUE;
+            // Lógica simples para escolher estação (poderia ser mais complexa, ex: distância)
             if (listaEstacoes != null) {
                 for (int j = 0; j < listaEstacoes.tamanho(); j++) {
                     EstacaoTransferencia est = listaEstacoes.obter(j);
-                    if (est instanceof EstacaoPadrao) {
+                    if (est instanceof EstacaoPadrao) { // Garante que é uma EstacaoPadrao para pegar a fila
                         int tamanhoFila = ((EstacaoPadrao) est).getCaminhoesNaFila();
                         if (tamanhoFila < menorFila) {
                             menorFila = tamanhoFila;
@@ -568,9 +598,9 @@ public class Simulador implements Serializable {
                 }
             }
 
-            if (melhorEstacao == null) {
+            if (melhorEstacao == null) { // Se não encontrou nenhuma EstacaoPadrao
                 System.err.println("ERRO SIM: Nenhuma EstacaoPadrao disponível para CP " + caminhao.getPlaca() + " descarregar.");
-                return; // Não há para onde ir
+                return;
             }
 
             String zonaOrigemNome = (caminhao.getZonaDeOrigemParaRetorno() != null) ? caminhao.getZonaDeOrigemParaRetorno().getNome() : "OrigemDesconhecida";
@@ -579,48 +609,46 @@ public class Simulador implements Serializable {
                     caminhao.getPlaca(), caminhao.getCargaAtual(), zonaOrigemNome,
                     melhorEstacao.getNome(), menorFila, tempoViagemCalc);
 
-            caminhao.definirDestino(melhorEstacao); // Atualiza status para VIAJANDO_ESTACAO, estacaoDestino, e zera zonaAtual
+            caminhao.definirDestino(melhorEstacao); // Seta status para VIAJANDO_ESTACAO
             caminhao.definirTempoViagem(tempoViagemCalc);
             if (!caminhao.registrarViagem()) { // Se false, caminhão ficou INATIVO_LIMITE_VIAGENS
                 System.out.println("INFO SIM: CP " + caminhao.getPlaca() + " tornou-se INATIVO ao registrar viagem para estação " + melhorEstacao.getNome());
+                // Se usar garagem, o caminhão inativo poderia ser "recolhido" ou marcado para retornar
+                if (usarGaragemCentral && garagemCentral != null && caminhao.getZonaAtual() != null) {
+                    // garagemCentral.retornarCaminhaoDeZona(caminhao, caminhao.getZonaAtual());
+                    // No entanto, ele está VIAJANDO, então não está "em uma zona" para ser retornado dela.
+                    // A garagem o pegará quando ele voltar a estar OCIOSO após o dia.
+                }
             }
         }
     }
 
     private void processarCaminhaoEmViagem(CaminhaoPequeno caminhao) {
         if (caminhao.processarViagem()) { // Viagem concluída
-            StatusCaminhao statusAtualCaminhao = caminhao.getStatus(); // Captura o status ATUAL (pode ser INATIVO_LIMITE_VIAGENS)
+            StatusCaminhao statusAtualCaminhao = caminhao.getStatus();
 
-            // Se o caminhão se tornou INATIVO durante a viagem (ou ao registrar a viagem)
             if (statusAtualCaminhao == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
                 System.out.println("INFO SIM: CP INATIVO " + caminhao.getPlaca() + " completou sua última viagem programada e permanece INATIVO.");
-                // Ele não fará a ação de chegada (entrar na fila ou coletar)
-                // Será tratado na virada do dia.
                 return;
             }
 
-            // Se estava VIAJANDO_ESTACAO e NÃO está inativo por limite
             if (caminhao.getEstacaoDestino() != null && statusAtualCaminhao == StatusCaminhao.VIAJANDO_ESTACAO) {
                 EstacaoTransferencia estacaoDest = caminhao.getEstacaoDestino();
                 System.out.printf("CHEGADA EST: CP %s chegou à Estação %s.%n", caminhao.getPlaca(), estacaoDest.getNome());
                 if (estacaoDest instanceof EstacaoPadrao) {
-                    ((EstacaoPadrao) estacaoDest).receberCaminhaoPequeno(caminhao, this.tempoSimulado % MINUTOS_EM_UM_DIA);
+                    ((EstacaoPadrao) estacaoDest).receberCaminhaoPequeno(caminhao, this.tempoSimulado % MINUTOS_EM_UM_DIA); // Passa tempo para cálculo de espera
                     caminhao.setStatus(StatusCaminhao.NA_FILA);
-                    // caminhao.setEstacaoDestino(estacaoDest); // já setado
-                    // caminhao.setZonaAtual(null); // JÁ É NULL desde definirDestino(estacao) - REMOVIDO DAQUI
                     estatisticas.registrarChegadaEstacao(estacaoDest.getNome());
                 } else {
                     System.err.println("ERRO SIM: CP " + caminhao.getPlaca() + " chegou a est. não padrão " + estacaoDest.getNome() + ". OCIOSO.");
                     caminhao.setStatus(StatusCaminhao.OCIOSO);
                 }
             }
-            // Se estava RETORNANDO_ZONA e NÃO está inativo por limite
             else if (caminhao.getZonaAtual() != null && statusAtualCaminhao == StatusCaminhao.RETORNANDO_ZONA) {
                 ZonaUrbana zonaDest = caminhao.getZonaAtual();
                 System.out.printf("RETORNO ZONA: CP %s retornou à Zona %s para coletar.%n", caminhao.getPlaca(), zonaDest.getNome());
-                caminhao.setStatus(StatusCaminhao.COLETANDO);
+                caminhao.setStatus(StatusCaminhao.COLETANDO); // Volta a coletar
             } else {
-                // Se chegou aqui, é um estado inesperado APÓS a viagem E NÃO é INATIVO_LIMITE_VIAGENS
                 System.err.printf("ALERTA SIM: CP %s completou viagem mas estado final é inesperado: Status=%s, EstDest=%s, ZonaAtual=%s. OCIOSO.%n",
                         caminhao.getPlaca(), statusAtualCaminhao, caminhao.getEstacaoDestino(), caminhao.getZonaAtual());
                 caminhao.setStatus(StatusCaminhao.OCIOSO);
@@ -633,7 +661,8 @@ public class Simulador implements Serializable {
         for (int i = 0; i < listaEstacoes.tamanho(); i++) {
             if (listaEstacoes.obter(i) instanceof EstacaoPadrao) {
                 EstacaoPadrao estacaoPadrao = (EstacaoPadrao) listaEstacoes.obter(i);
-                ResultadoProcessamentoFila resultado = estacaoPadrao.processarFila(this.tempoSimulado % MINUTOS_EM_UM_DIA);
+                // Processa a fila de caminhões pequenos na estação
+                ResultadoProcessamentoFila resultado = estacaoPadrao.processarFila(this.tempoSimulado % MINUTOS_EM_UM_DIA); // Passa o tempo atual para cálculo de espera
                 CaminhaoPequeno caminhaoProcessado = resultado.getCaminhaoProcessado();
                 long tempoEsperaReal = resultado.getTempoDeEspera();
 
@@ -641,28 +670,25 @@ public class Simulador implements Serializable {
                     estatisticas.registrarAtendimentoCaminhaoPequeno(estacaoPadrao.getNome(), tempoEsperaReal);
                     ZonaUrbana zonaDeRetornoOriginal = caminhaoProcessado.getZonaDeOrigemParaRetorno();
 
-                    // Verifica se o caminhão está INATIVO_LIMITE_VIAGENS *após* descarregar
                     if (caminhaoProcessado.getStatus() == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
                         System.out.println("INFO SIM: CP " + caminhaoProcessado.getPlaca() + " descarregou, mas já está INATIVO_LIMITE_VIAGENS.");
-                        // Não precisa mudar status, ele já está inativo.
-
-                        // Se estiver usando garagem central, pode recolher o caminhão inativo
-                        if (usarGaragemCentral && garagemCentral != null) {
-                            if (zonaDeRetornoOriginal != null) {
-                                garagemCentral.retornarCaminhaoDeZona(caminhaoProcessado, zonaDeRetornoOriginal);
-                                System.out.println("INFO SIM: CP INATIVO " + caminhaoProcessado.getPlaca() +
-                                        " retornou para a garagem central após descarregar na estação.");
-                            }
+                        if (usarGaragemCentral && garagemCentral != null && zonaDeRetornoOriginal != null) {
+                            // Idealmente, o caminhão inativo deveria ir para a garagem, não para uma zona.
+                            // Mas a lógica atual o manda de volta para a zona de origem.
+                            // A garagem o pegará no dia seguinte quando ele se tornar OCIOSO.
                         }
                     } else if (zonaDeRetornoOriginal != null) {
                         caminhaoProcessado.setStatus(StatusCaminhao.RETORNANDO_ZONA);
                         caminhaoProcessado.definirDestino(zonaDeRetornoOriginal); // Define zonaAtual para retorno
                         caminhaoProcessado.definirTempoViagem(calcularTempoViagemPequeno());
                         System.out.printf("RETORNO PREP: CP %s de Est. %s -> Zona %s. Viagem: %d min.%n",
-                                caminhaoProcessado.getPlaca(), estacaoPadrao.getNome(), zonaDeRetornoOriginal.getNome(), caminhaoProcessado.getTempoRestanteViagem()); // Usa GETTER
+                                caminhaoProcessado.getPlaca(), estacaoPadrao.getNome(), zonaDeRetornoOriginal.getNome(), caminhaoProcessado.getTempoRestanteViagem());
                     } else {
                         System.err.println("AVISO CRÍTICO SIM: CP " + caminhaoProcessado.getPlaca() + " descarregou SEM zona de origem para retorno! Tornando OCIOSO.");
                         caminhaoProcessado.setStatus(StatusCaminhao.OCIOSO);
+                        if (usarGaragemCentral && garagemCentral != null) { // Se ocioso, pode ir para garagem
+                            garagemCentral.adicionarCaminhao(caminhaoProcessado);
+                        }
                     }
                 }
 
@@ -670,21 +696,29 @@ public class Simulador implements Serializable {
                 CaminhaoGrande cgQuePartiu = estacaoPadrao.gerenciarTempoEsperaCaminhaoGrande();
                 if (cgQuePartiu != null) {
                     int cargaTransportada = cgQuePartiu.getCargaAtual(); // Pega a carga ANTES de descarregar
-                    cgQuePartiu.descarregar(); // Zera a carga do caminhão grande
+                    cgQuePartiu.descarregar(); // Zera a carga do caminhão grande que partiu
+
+                    // ***** ALTERAÇÃO IMPORTANTE AQUI *****
+                    // Registrar o transporte na estação de origem e a quantidade
+                    estatisticas.registrarTransporteLixoCGPorEstacao(estacaoPadrao.getNome(), cargaTransportada);
+                    // Registrar a viagem do CG (apenas para contagem de viagens, o lixo já foi contabilizado acima)
+                    // Passamos cargaTransportada para que o método saiba que foi uma viagem com carga (e conte a viagem).
                     estatisticas.registrarTransporteLixo(cargaTransportada);
 
+
                     if (listaCaminhoesGrandesDisponiveis == null) listaCaminhoesGrandesDisponiveis = new Lista<>();
-                    listaCaminhoesGrandesDisponiveis.adicionar(cgQuePartiu);
+                    listaCaminhoesGrandesDisponiveis.adicionar(cgQuePartiu); // Adiciona de volta à lista de disponíveis
                     caminhoesGrandesEmUso--;
-                    System.out.println("INFO SIM: CG ("+cgQuePartiu+") retornou do aterro. CGs Disp: " + listaCaminhoesGrandesDisponiveis.tamanho() + ", Em Uso: " + caminhoesGrandesEmUso);
+                    System.out.println("INFO SIM: CG ("+cgQuePartiu+") retornou do aterro e está disponível. CGs Disp: " + listaCaminhoesGrandesDisponiveis.tamanho() + ", Em Uso: " + caminhoesGrandesEmUso);
                 }
 
                 // Verificar necessidade de alocar ou adicionar novo CG
-                if (estacaoPadrao.precisaCaminhaoGrande()) {
+                if (estacaoPadrao.precisaCaminhaoGrande()) { // Se a estação não tem CG e tem CPs na fila
                     atribuirCaminhaoGrandeParaEstacao(estacaoPadrao);
                 }
+                // Adiciona novo CG à frota se o tempo de espera de CPs for muito alto
                 if (estacaoPadrao.tempoEsperaExcedido()) {
-                    System.out.println("ALERTA EST SIM: Tempo de espera de CPs excedido na Est. " + estacaoPadrao.getNome() + "! Adicionando novo CG à frota.");
+                    System.out.println("ALERTA EST SIM: Tempo de espera de CPs excedido na Est. " + estacaoPadrao.getNome() + "! Adicionando novo CG à frota global.");
                     adicionarCaminhaoGrande(); // Adiciona à frota geral
                     if (estacaoPadrao.precisaCaminhaoGrande()) { // Re-verifica se AINDA precisa após adição
                         atribuirCaminhaoGrandeParaEstacao(estacaoPadrao);
@@ -694,31 +728,34 @@ public class Simulador implements Serializable {
         }
     }
 
+
     private void atribuirCaminhaoGrandeParaEstacao(EstacaoPadrao estacao) {
-        if (estacao == null || !estacao.precisaCaminhaoGrande()) return;
+        if (estacao == null || !estacao.precisaCaminhaoGrande()) return; // Já tem CG ou não precisa
         if (listaCaminhoesGrandesDisponiveis == null || listaCaminhoesGrandesDisponiveis.estaVazia()) {
-            //System.out.println("INFO SIM: Est. " + estacao.getNome() + " precisa de CG, mas NENHUM está disponível."); // Log opcional
+            //System.out.println("INFO SIM: Est. " + estacao.getNome() + " precisa de CG, mas NENHUM está disponível no momento.");
             return;
         }
 
-        CaminhaoGrande caminhao = listaCaminhoesGrandesDisponiveis.remover(0);
+        CaminhaoGrande caminhao = listaCaminhoesGrandesDisponiveis.remover(0); // Pega o primeiro disponível
         if (estacao.atribuirCaminhaoGrande(caminhao)) {
             caminhoesGrandesEmUso++;
-            System.out.printf("ALOCAÇÃO CG SIM: CG alocado para Est. %s. Em uso: %d. Disp: %d%n",
-                    estacao.getNome(), caminhoesGrandesEmUso, listaCaminhoesGrandesDisponiveis.tamanho());
+            System.out.printf("ALOCAÇÃO CG SIM: CG (%s) alocado para Est. %s. Em uso: %d. Disp: %d%n",
+                    caminhao.toString(), estacao.getNome(), caminhoesGrandesEmUso, listaCaminhoesGrandesDisponiveis.tamanho());
         } else {
-            System.err.println("ERRO SIM: Falha ao atribuir CG ("+caminhao+") à est. " + estacao.getNome() + " (talvez já tenha um?). Devolvendo à lista de disponíveis.");
-            listaCaminhoesGrandesDisponiveis.adicionar(caminhao); // Adiciona de volta ao final ou início da lista
+            // Isso não deveria acontecer se estacao.precisaCaminhaoGrande() retornou true
+            System.err.println("ERRO SIM: Falha ao atribuir CG ("+caminhao+") à est. " + estacao.getNome() + " (talvez já tenha um inesperadamente?). Devolvendo à lista de disponíveis.");
+            listaCaminhoesGrandesDisponiveis.adicionar(caminhao); // Adiciona de volta
         }
     }
 
     private void imprimirRelatorioHorario() {
+        // Este método imprime no console (que é redirecionado para a área de log da GUI)
         System.out.println("\n========================================================================");
         int tempoNoDia = this.tempoSimulado % MINUTOS_EM_UM_DIA;
         System.out.printf("=== RELATÓRIO DE STATUS === Tempo: %s %s ===%n", formatarTempo(this.tempoSimulado), isHorarioDePico(tempoNoDia) ? "(PICO)" : "");
         System.out.println("------------------------------------------------------------------------");
 
-        int cpColetando = 0, cpEmViagem = 0, cpNaFila = 0, cpOcioso = 0, cpInativoLimite = 0, cpDescarregando = 0; // cpDescarregando pode ser omitido se NA_FILA o cobre
+        int cpColetando = 0, cpEmViagem = 0, cpNaFila = 0, cpOcioso = 0, cpInativoLimite = 0, cpDescarregando = 0;
         if (todosOsCaminhoesPequenos != null) {
             for (int i = 0; i < todosOsCaminhoesPequenos.tamanho(); i++) {
                 CaminhaoPequeno cp = todosOsCaminhoesPequenos.obter(i);
@@ -726,7 +763,7 @@ public class Simulador implements Serializable {
                     case COLETANDO: cpColetando++; break;
                     case VIAJANDO_ESTACAO: case RETORNANDO_ZONA: cpEmViagem++; break;
                     case NA_FILA: cpNaFila++; break;
-                    case DESCARREGANDO: cpDescarregando++; break; // Estações podem ter caminhões descarregando que não estão mais "na fila"
+                    case DESCARREGANDO: cpDescarregando++; break;
                     case OCIOSO: cpOcioso++; break;
                     case INATIVO_LIMITE_VIAGENS: cpInativoLimite++; break;
                 }
@@ -747,10 +784,8 @@ public class Simulador implements Serializable {
             for (int i = 0; i < listaZonas.tamanho(); i++) {
                 ZonaUrbana zona = listaZonas.obter(i);
                 lixoTotalZonas += zona.getLixoAcumulado();
-
-                // Se temos o sistema de distribuição, mostra o score também
                 if (distribuicaoCaminhoes != null) {
-                    double score = distribuicaoCaminhoes.getScoreZona(zona.getNome());
+                    double score = distribuicaoCaminhoes.getScoreZona(zona.getNome()); // Usa o score final para display
                     System.out.printf("  - %-10s: %6d kg (Score: %.2f)%n", zona.getNome(), zona.getLixoAcumulado(), score);
                 } else {
                     System.out.printf("  - %-10s: %6d kg%n", zona.getNome(), zona.getLixoAcumulado());
@@ -772,7 +807,6 @@ public class Simulador implements Serializable {
             }
         } else { System.out.println("  (Nenhuma estação configurada)");}
 
-        // Adiciona informação da garagem central, se disponível
         if (usarGaragemCentral && garagemCentral != null) {
             System.out.println("------------------------------------------------------------------------");
             System.out.println("GARAGEM CENTRAL:");
@@ -780,9 +814,9 @@ public class Simulador implements Serializable {
                     garagemCentral.getNome(), garagemCentral.getCaminhoesEstacionados(),
                     garagemCentral.getLimiteViagensDiariasPadrao());
         }
-
         System.out.println("========================================================================\n");
     }
+
 
     // --- Getters para UI e outros ---
     public Estatisticas getEstatisticas() { return estatisticas; }
@@ -793,13 +827,14 @@ public class Simulador implements Serializable {
     public Lista<CaminhaoPequeno> getTodosOsCaminhoesPequenos() { return todosOsCaminhoesPequenos; }
     public int getCaminhoesGrandesEmUso() { return caminhoesGrandesEmUso; }
     public int getCaminhoesGrandesDisponiveis() { return listaCaminhoesGrandesDisponiveis != null ? listaCaminhoesGrandesDisponiveis.tamanho() : 0; }
-    public int getTotalCaminhoesGrandes() { return totalCaminhoesGrandesCriados; }
+    public int getTotalCaminhoesGrandes() { return totalCaminhoesGrandesCriados; } // Total que já existiu na frota
     public int getToleranciaCaminhoesGrandes() { return toleranciaCaminhoesGrandes; }
     public boolean isUsarGaragemCentral() { return usarGaragemCentral; }
     public boolean isGarantirDistribuicaoMinima() { return garantirDistribuicaoMinima; }
     public int getCaminhoesPorZonaMinimo() { return caminhoesPorZonaMinimo; }
     public int getLimiteViagensDiarias() { return limiteViagensDiarias; }
     public GaragemCentral getGaragemCentral() { return garagemCentral; }
+
 
     private String formatarTempo(int minutosTotais) {
         int dias = minutosTotais / MINUTOS_EM_UM_DIA;

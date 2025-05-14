@@ -6,7 +6,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.ProgressIndicator?> <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.Tab?>
@@ -52,7 +52,7 @@
                         <Button fx:id="btnEncerrar" mnemonicParsing="false" onAction="#handleEncerrarSimulacao" style="-fx-background-color: #f44336; -fx-text-fill: white;" text="Encerrar" />
                         <HBox HBox.hgrow="ALWAYS" />
                         <Button fx:id="btnAdicionarCaminhaoGrande" mnemonicParsing="false" onAction="#handleAdicionarCaminhaoGrande" style="-fx-background-color: #2196F3; -fx-text-fill: white;" text="Adicionar Caminhão Grande" />
-                        <Button fx:id="btnGerarRelatorio" mnemonicParsing="false" onAction="#handleGerarRelatorio" text="Gerar Relatório" />
+                        <Button fx:id="btnGerarRelatorio" mnemonicParsing="false" onAction="#handleGerarRelatorio" text="Gerar Relatório Textual" />
                     </children>
                 </HBox>
             </children>
@@ -368,13 +368,18 @@
                         </ScrollPane>
                     </content>
                 </Tab>
-                <Tab text="Relatório Final">
+
+                <Tab fx:id="tabRelatorioFinal" text="Relatório Final">
                     <content>
-                        <ScrollPane fitToWidth="true" fitToHeight="true">
-                            <content>
-                                <TextArea fx:id="areaRelatorioFinal" editable="false" wrapText="true" prefHeight="600.0" />
-                            </content>
-                        </ScrollPane>
+                        <VBox alignment="CENTER" spacing="10">
+                            <children>
+                                <Label text="O relatório gráfico será carregado aqui após a simulação."/>
+                                <ProgressIndicator progress="-1.0" />
+                            </children>
+                            <padding>
+                                <Insets top="20.0" />
+                            </padding>
+                        </VBox>
                     </content>
                 </Tab>
             </tabs>
