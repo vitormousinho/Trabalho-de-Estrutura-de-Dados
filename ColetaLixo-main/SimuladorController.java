@@ -18,8 +18,11 @@ import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.Node; // Importação adicionada
-
+import javafx.scene.Node;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +31,6 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.Locale;
 
-
 import caminhoes.CaminhaoGrande;
 import caminhoes.CaminhaoPequeno;
 import caminhoes.CaminhaoPequenoPadrao;
@@ -36,10 +38,8 @@ import caminhoes.CaminhaoGrandePadrao;
 import estacoes.EstacaoPadrao;
 import estacoes.EstacaoTransferencia;
 import zonas.ZonaUrbana;
-import Estruturas.Lista; // Sua classe Lista
+import Estruturas.Lista;
 import caminhoes.StatusCaminhao;
-// Se MetricaEstacaoModel estiver em outro pacote, importe-o
-// import seu_pacote.MetricaEstacaoModel;
 
 public class SimuladorController {
 
@@ -189,20 +189,55 @@ public class SimuladorController {
         // Carregar o conteúdo da aba de relatório final
         if (tabRelatorioFinal != null) {
             try {
-                // Certifique-se que "RelatorioFinalTab.fxml" está na mesma pasta que esta classe
-                // ou ajuste o caminho getResource("/caminho/para/RelatorioFinalTab.fxml")
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("RelatorioFinalTab.fxml"));
-                loader.setController(this); // Importante: esta classe também controla o FXML da aba de relatório
-                Node relatorioNode = loader.load();
-                tabRelatorioFinal.setContent(relatorioNode);
+                // Tente carregar o arquivo diretamente como um InputStream
+                InputStream fxmlStream = null;
+
+                // Primeiro, tente como recurso do ClassLoader
+                fxmlStream = getClass().getClassLoader().getResourceAsStream("RelatorioFinalTab.fxml");
+
+                // Se não encontrou, tente como arquivo no sistema de arquivos
+                if (fxmlStream == null) {
+                    File fxmlFile = new File("RelatorioFinalTab.fxml");
+                    if (fxmlFile.exists()) {
+                        fxmlStream = new FileInputStream(fxmlFile);
+                        adicionarLog("Carregando RelatorioFinalTab.fxml como arquivo local.");
+                    } else {
+                        // Tente outros caminhos possíveis
+                        File fxmlFile2 = new File("./RelatorioFinalTab.fxml");
+                        if (fxmlFile2.exists()) {
+                            fxmlStream = new FileInputStream(fxmlFile2);
+                            adicionarLog("Carregando RelatorioFinalTab.fxml do diretório atual.");
+                        } else {
+                            // Último recurso: procurar no diretório pai
+                            File fxmlFile3 = new File("../RelatorioFinalTab.fxml");
+                            if (fxmlFile3.exists()) {
+                                fxmlStream = new FileInputStream(fxmlFile3);
+                                adicionarLog("Carregando RelatorioFinalTab.fxml do diretório pai.");
+                            }
+                        }
+                    }
+                }
+
+                if (fxmlStream != null) {
+                    FXMLLoader loader = new FXMLLoader();
+                    loader.setController(this);
+                    Node relatorioNode = loader.load(fxmlStream);
+                    tabRelatorioFinal.setContent(relatorioNode);
+                    fxmlStream.close();
+                    adicionarLog("RelatorioFinalTab.fxml carregado com sucesso.");
+                } else {
+                    throw new IOException("Não foi possível encontrar o arquivo RelatorioFinalTab.fxml em nenhum caminho esperado.");
+                }
+
             } catch (IOException e) {
-                adicionarLog("ERRO CRÍTICO: Não foi possível carregar RelatorioFinalTab.fxml. Verifique o caminho e o arquivo.\n" + e.getMessage());
+                adicionarLog("ERRO: Não foi possível carregar RelatorioFinalTab.fxml: " + e.getMessage());
                 e.printStackTrace();
+
                 // Mostra um alerta para o usuário
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Erro de Carregamento da Interface");
                 alert.setHeaderText("Falha ao carregar a aba de relatório");
-                alert.setContentText("O arquivo RelatorioFinalTab.fxml não pôde ser encontrado ou carregado. Verifique o console para mais detalhes.");
+                alert.setContentText("O arquivo RelatorioFinalTab.fxml não pôde ser encontrado. Detalhes: " + e.getMessage());
                 alert.showAndWait();
             } catch (Exception e_geral) {
                 adicionarLog("ERRO GERAL ao carregar RelatorioFinalTab.fxml: " + e_geral.getMessage());
@@ -254,7 +289,6 @@ public class SimuladorController {
         atualizacaoUITimer.setCycleCount(Timeline.INDEFINITE);
     }
 
-    // ... (configurarSpinners, configurarCheckBoxes, inicializarInterface, handleIniciarSimulacao, configurarSimuladorComValoresPadraoExemplo, handleAplicarConfiguracao, confirmarSubstituicaoSimulacao, adicionarCaminhoesConfig, criarZonaConfig, handlePausarSimulacao, handleContinuarSimulacao, handleAdicionarCaminhaoGrande, handleGerarRelatorio - MANTENHA ESTES MÉTODOS COMO ESTAVAM ANTES)
     private void configurarSpinners() {
         if (spinnerCaminhoes2T != null) spinnerCaminhoes2T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 2));
         if (spinnerCaminhoes4T != null) spinnerCaminhoes4T.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 100, 1));
@@ -454,7 +488,6 @@ public class SimuladorController {
             e.printStackTrace();
         }
     }
-
     private boolean confirmarSubstituicaoSimulacao() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Substituir Simulação");
@@ -798,6 +831,168 @@ public class SimuladorController {
         return hbox;
     }
 
+    // Método modificado para melhorar a visualização do relatório gráfico
+    private void exibirRelatorioFinalGrafico() {
+        if (simulador == null || simulador.getEstatisticas() == null) {
+            adicionarLog("Simulador ou estatísticas não disponíveis para gerar relatório gráfico.");
+            // Limpar campos do relatório se estiverem preenchidos de simulação anterior
+            if (barChartLixoPorZona != null) barChartLixoPorZona.getData().clear();
+            if (tableViewMetricasEstacao != null) tableViewMetricasEstacao.getItems().clear();
+            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: N/D");
+            // ... limpar outros labels
+            return;
+        }
+
+        Estatisticas stats = simulador.getEstatisticas();
+        Platform.runLater(() -> {
+            try {
+                // 1. Popular BarChart Lixo Gerado por Zona
+                if (barChartLixoPorZona != null) {
+                    barChartLixoPorZona.getData().clear();
+
+                    XYChart.Series<String, Number> seriesLixoGerado = new XYChart.Series<>();
+                    seriesLixoGerado.setName("Lixo Gerado");
+
+                    XYChart.Series<String, Number> seriesLixoColetado = new XYChart.Series<>();
+                    seriesLixoColetado.setName("Lixo Coletado");
+
+                    Lista<Estatisticas.EntradaZona> zonasStats = stats.getEstatisticasZonas();
+                    String[] nomesZonasOrdenadas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"}; // Ordem desejada
+
+                    for (String nomeZona : nomesZonasOrdenadas) {
+                        boolean encontrada = false;
+                        for (int i = 0; i < zonasStats.tamanho(); i++) {
+                            Estatisticas.EntradaZona zonaStat = zonasStats.obter(i);
+                            if (zonaStat.nomeZona.equals(nomeZona)) {
+                                seriesLixoGerado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoGerado));
+                                seriesLixoColetado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoColetado));
+                                encontrada = true;
+                                break;
+                            }
+                        }
+                        if (!encontrada) { // Adiciona com valor 0 se não houver dados
+                            seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, 0));
+                            seriesLixoColetado.getData().add(new XYChart.Data<>(nomeZona, 0));
+                        }
+                    }
+
+                    barChartLixoPorZona.getData().add(seriesLixoGerado);
+                    barChartLixoPorZona.getData().add(seriesLixoColetado);
+                    barChartLixoPorZona.setLegendVisible(true);
+
+                    // Aplicar estilo às barras
+                    for (XYChart.Series<String, Number> s : barChartLixoPorZona.getData()) {
+                        if (s.getName().equals("Lixo Gerado")) {
+                            for (XYChart.Data<String, Number> d : s.getData()) {
+                                Node n = d.getNode();
+                                if (n != null) {
+                                    n.setStyle("-fx-bar-fill: #3498db;"); // Azul para lixo gerado
+                                }
+                            }
+                        } else if (s.getName().equals("Lixo Coletado")) {
+                            for (XYChart.Data<String, Number> d : s.getData()) {
+                                Node n = d.getNode();
+                                if (n != null) {
+                                    n.setStyle("-fx-bar-fill: #2ecc71;"); // Verde para lixo coletado
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Popular TableView Métricas por Estação
+                if (tableViewMetricasEstacao != null) {
+                    ObservableList<MetricaEstacaoModel> metricasEstacaoList = FXCollections.observableArrayList();
+                    Lista<Estatisticas.EntradaEstacao> estacoesStats = stats.getEstatisticasEstacoes();
+                    for (int i = 0; i < estacoesStats.tamanho(); i++) {
+                        Estatisticas.EntradaEstacao estStat = estacoesStats.obter(i);
+                        metricasEstacaoList.add(new MetricaEstacaoModel(
+                                estStat.nomeEstacao,
+                                estStat.caminhoesPequenosDescarregados,
+                                stats.getTempoMedioEsperaPorEstacao(estStat.nomeEstacao),
+                                estStat.getLixoTransferidoCG()
+                        ));
+                    }
+                    tableViewMetricasEstacao.setItems(metricasEstacaoList);
+                }
+
+                // 3. Popular Principais Descobertas
+                double eficienciaColeta = stats.calcularPercentualLixoColetado();
+                String eficienciaTexto = String.format(brLocale, "O sistema conseguiu coletar %.2f%% do lixo gerado ", eficienciaColeta);
+                if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0) {
+                    eficienciaTexto += "(simulação não gerou/coletou lixo significativamente).";
+                } else if (eficienciaColeta == 100.0) {
+                    eficienciaTexto += "em todas as zonas, demonstrando excelente capacidade de coleta.";
+                } else if (eficienciaColeta >= 80) {
+                    eficienciaTexto += ", indicando uma boa capacidade de coleta.";
+                } else {
+                    eficienciaTexto += ", o que pode indicar necessidade de otimização na frota de caminhões pequenos ou na distribuição.";
+                }
+                if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: " + eficienciaTexto);
+                Estatisticas.EntradaZona zonaMaiorGeracao = null;
+                Estatisticas.EntradaZona zonaMenorGeracao = null;
+                Lista<Estatisticas.EntradaZona> zonasStatsList = stats.getEstatisticasZonas();
+
+                if (zonasStatsList != null && !zonasStatsList.estaVazia()) {
+                    // Inicializa com a primeira zona, se existir
+                    zonaMaiorGeracao = zonasStatsList.obter(0);
+                    zonaMenorGeracao = zonasStatsList.obter(0);
+                    for (int i = 1; i < zonasStatsList.tamanho(); i++) {
+                        Estatisticas.EntradaZona atual = zonasStatsList.obter(i);
+                        if (atual.lixoGerado > zonaMaiorGeracao.lixoGerado) zonaMaiorGeracao = atual;
+                        if (atual.lixoGerado < zonaMenorGeracao.lixoGerado) zonaMenorGeracao = atual;
+                    }
+                }
+
+                if (zonaMaiorGeracao != null && zonaMenorGeracao != null && stats.getLixoTotalGerado() > 0) {
+                    double percMaior = ((double) zonaMaiorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
+                    double percMenor = ((double) zonaMenorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
+                    if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText(String.format(brLocale, "Distribuição de Lixo: A zona %s gerou a maior quantidade de lixo (%,d kg, %.1f%% do total), enquanto a zona %s produziu a menor quantidade (%,d kg, %.1f%% do total).",
+                            zonaMaiorGeracao.nomeZona, zonaMaiorGeracao.lixoGerado, percMaior,
+                            zonaMenorGeracao.nomeZona, zonaMenorGeracao.lixoGerado, percMenor));
+                } else {
+                    if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText("Distribuição de Lixo: Dados insuficientes ou lixo não gerado para análise detalhada.");
+                }
+
+                double tempoMedioGlobalEsperaEstacoes = stats.calcularTempoMedioEsperaFilaPequenos();
+                if (lblGargalosSistema != null) lblGargalosSistema.setText(String.format(brLocale, "Gargalos no Sistema: O tempo médio de espera nas estações (global: %.1f minutos) pode indicar o nível de congestionamento nas estações de transferência.", tempoMedioGlobalEsperaEstacoes));
+
+
+                if (stats.getCaminhoesGrandesAdicionados() > 0) {
+                    if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText(String.format(brLocale, "Otimização da Frota: O sistema precisou adicionar %d caminhões grandes além da frota inicial para atender à demanda.", stats.getCaminhoesGrandesAdicionados()));
+                } else {
+                    if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText("Otimização da Frota: A frota inicial de caminhões grandes foi suficiente para a demanda observada, não havendo adições durante a simulação.");
+                }
+
+                // 4. Popular Conclusão
+                int numCGNecessarios = stats.calcularEstimativaCaminhoesGrandesNecessarios();
+                String conclusaoTexto1 = String.format(brLocale,
+                        "A simulação demonstra que o sistema de coleta de lixo de Teresina, com a configuração testada, apresentou uma eficiência de %.2f%% na coleta. ", eficienciaColeta);
+                conclusaoTexto1 += "O principal fator limitante para o transporte final ao aterro sanitário frequentemente reside no número e na gestão dos caminhões grandes disponíveis. ";
+                if (stats.getCaminhoesGrandesAdicionados() > 0) {
+                    conclusaoTexto1 += String.format(brLocale, "Na simulação atual, %d caminhões grandes foram adicionados dinamicamente, indicando uma demanda que excedeu a capacidade inicial da frota de transporte.", stats.getCaminhoesGrandesAdicionados());
+                } else if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0 && stats.getLixoTotalTransportado() == 0) {
+                    conclusaoTexto1 += "A simulação não apresentou dados de coleta para avaliar a frota de caminhões grandes.";
+                }
+                else {
+                    conclusaoTexto1 += "A frota inicial de caminhões grandes mostrou-se adequada durante esta simulação.";
+                }
+                if (lblConclusaoTexto1 != null) lblConclusaoTexto1.setText(conclusaoTexto1);
+
+                if (lblConclusaoCaminhoesNecessarios != null) lblConclusaoCaminhoesNecessarios.setText(String.format(brLocale, "%d Caminhões de %d Toneladas", numCGNecessarios, CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000));
+
+                if (lblConclusaoTexto2 != null) lblConclusaoTexto2.setText(String.format(brLocale, "Esta conclusão considera a quantidade total de lixo coletado diariamente nas cinco zonas e a capacidade de transporte dos caminhões grandes. Com uma frota mínima de %d caminhões grandes, o sistema pode operar com eficiência, minimizando tempos de espera nas estações de transferência e garantindo o transporte adequado do lixo coletado.", numCGNecessarios));
+
+                // Mudar para a aba de relatório
+                if (tabPanePrincipal != null && tabRelatorioFinal != null) {
+                    tabPanePrincipal.getSelectionModel().select(tabRelatorioFinal);
+                }
+            } catch (Exception e) {
+                adicionarLog("Erro ao gerar relatório gráfico: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
 
     private String formatarTempo(int minutosTotais) {
         if (minutosTotais < 0) return "00:00";
@@ -826,142 +1021,6 @@ public class SimuladorController {
         if (atualizacaoUITimer != null) {
             atualizacaoUITimer.stop();
         }
-    }
-
-    // Novo método para popular a aba de relatório gráfico
-    private void exibirRelatorioFinalGrafico() {
-        if (simulador == null || simulador.getEstatisticas() == null) {
-            adicionarLog("Simulador ou estatísticas não disponíveis para gerar relatório gráfico.");
-            // Limpar campos do relatório se estiverem preenchidos de simulação anterior
-            if (barChartLixoPorZona != null) barChartLixoPorZona.getData().clear();
-            if (tableViewMetricasEstacao != null) tableViewMetricasEstacao.getItems().clear();
-            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: N/D");
-            // ... limpar outros labels
-            return;
-        }
-
-        Estatisticas stats = simulador.getEstatisticas();
-        Platform.runLater(() -> {
-            // 1. Popular BarChart Lixo Gerado por Zona
-            if (barChartLixoPorZona != null) {
-                barChartLixoPorZona.getData().clear();
-                XYChart.Series<String, Number> seriesLixoGerado = new XYChart.Series<>();
-                // seriesLixoGerado.setName("Lixo Gerado"); // Legenda não é visível no FXML
-
-                Lista<Estatisticas.EntradaZona> zonasStats = stats.getEstatisticasZonas();
-                String[] nomesZonasOrdenadas = {"Sul", "Norte", "Centro", "Leste", "Sudeste"}; // Ordem desejada
-
-                for (String nomeZona : nomesZonasOrdenadas) {
-                    boolean encontrada = false;
-                    for (int i = 0; i < zonasStats.tamanho(); i++) {
-                        Estatisticas.EntradaZona zonaStat = zonasStats.obter(i);
-                        if (zonaStat.nomeZona.equals(nomeZona)) {
-                            seriesLixoGerado.getData().add(new XYChart.Data<>(zonaStat.nomeZona, zonaStat.lixoGerado));
-                            encontrada = true;
-                            break;
-                        }
-                    }
-                    if (!encontrada) { // Adiciona com valor 0 se não houver dados, para manter a ordem no gráfico
-                        seriesLixoGerado.getData().add(new XYChart.Data<>(nomeZona, 0));
-                    }
-                }
-                barChartLixoPorZona.getData().add(seriesLixoGerado);
-                // Aplicar estilo às barras
-                for(Node n:barChartLixoPorZona.lookupAll(".chart-bar")) {
-                    n.setStyle("-fx-bar-fill: #2980b9;"); // Cor azul das imagens
-                }
-            }
-
-            // 2. Popular TableView Métricas por Estação
-            if (tableViewMetricasEstacao != null) {
-                ObservableList<MetricaEstacaoModel> metricasEstacaoList = FXCollections.observableArrayList();
-                Lista<Estatisticas.EntradaEstacao> estacoesStats = stats.getEstatisticasEstacoes();
-                for (int i = 0; i < estacoesStats.tamanho(); i++) {
-                    Estatisticas.EntradaEstacao estStat = estacoesStats.obter(i);
-                    metricasEstacaoList.add(new MetricaEstacaoModel(
-                            estStat.nomeEstacao,
-                            estStat.caminhoesPequenosDescarregados,
-                            stats.getTempoMedioEsperaPorEstacao(estStat.nomeEstacao),
-                            estStat.getLixoTransferidoCG()
-                    ));
-                }
-                tableViewMetricasEstacao.setItems(metricasEstacaoList);
-            }
-
-            // 3. Popular Principais Descobertas
-            double eficienciaColeta = stats.calcularPercentualLixoColetado();
-            String eficienciaTexto = String.format(brLocale, "O sistema conseguiu coletar %.2f%% do lixo gerado ", eficienciaColeta);
-            if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0) { // Caso a simulação não tenha rodado ou gerado lixo
-                eficienciaTexto += "(simulação não gerou/coletou lixo significativamente).";
-            } else if (eficienciaColeta == 100.0) {
-                eficienciaTexto += "em todas as cinco zonas, demonstrando excelente capacidade de coleta.";
-            } else if (eficienciaColeta >= 80) {
-                eficienciaTexto += ", indicando uma boa capacidade de coleta.";
-            } else {
-                eficienciaTexto += ", o que pode indicar necessidade de otimização na frota de caminhões pequenos ou na distribuição.";
-            }
-            if (lblEficienciaColeta != null) lblEficienciaColeta.setText("Eficiência de Coleta: " + eficienciaTexto);
-
-
-            Estatisticas.EntradaZona zonaMaiorGeracao = null;
-            Estatisticas.EntradaZona zonaMenorGeracao = null;
-            Lista<Estatisticas.EntradaZona> zonasStatsList = stats.getEstatisticasZonas();
-
-            if (zonasStatsList != null && !zonasStatsList.estaVazia()) {
-                // Inicializa com a primeira zona, se existir
-                zonaMaiorGeracao = zonasStatsList.obter(0);
-                zonaMenorGeracao = zonasStatsList.obter(0);
-                for (int i = 1; i < zonasStatsList.tamanho(); i++) {
-                    Estatisticas.EntradaZona atual = zonasStatsList.obter(i);
-                    if (atual.lixoGerado > zonaMaiorGeracao.lixoGerado) zonaMaiorGeracao = atual;
-                    if (atual.lixoGerado < zonaMenorGeracao.lixoGerado) zonaMenorGeracao = atual;
-                }
-            }
-
-            if (zonaMaiorGeracao != null && zonaMenorGeracao != null && stats.getLixoTotalGerado() > 0) {
-                double percMaior = ((double) zonaMaiorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
-                double percMenor = ((double) zonaMenorGeracao.lixoGerado / stats.getLixoTotalGerado()) * 100.0;
-                if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText(String.format(brLocale, "Distribuição de Lixo: A zona %s gerou a maior quantidade de lixo (%,d kg, %.1f%% do total), enquanto a zona %s produziu a menor quantidade (%,d kg, %.1f%% do total).",
-                        zonaMaiorGeracao.nomeZona, zonaMaiorGeracao.lixoGerado, percMaior,
-                        zonaMenorGeracao.nomeZona, zonaMenorGeracao.lixoGerado, percMenor));
-            } else {
-                if (lblDistribuicaoLixo != null) lblDistribuicaoLixo.setText("Distribuição de Lixo: Dados insuficientes ou lixo não gerado para análise detalhada.");
-            }
-
-            double tempoMedioGlobalEsperaEstacoes = stats.calcularTempoMedioEsperaFilaPequenos();
-            if (lblGargalosSistema != null) lblGargalosSistema.setText(String.format(brLocale, "Gargalos no Sistema: O tempo médio de espera nas estações (global: %.1f minutos) pode indicar o nível de congestionamento nas estações de transferência.", tempoMedioGlobalEsperaEstacoes));
-
-
-            if (stats.getCaminhoesGrandesAdicionados() > 0) {
-                if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText(String.format(brLocale, "Otimização da Frota: O sistema precisou adicionar %d caminhões grandes além da frota inicial para atender à demanda.", stats.getCaminhoesGrandesAdicionados()));
-            } else {
-                if (lblOtimizacaoFrota != null) lblOtimizacaoFrota.setText("Otimização da Frota: A frota inicial de caminhões grandes foi suficiente para a demanda observada, não havendo adições durante a simulação.");
-            }
-
-            // 4. Popular Conclusão
-            int numCGNecessarios = stats.calcularEstimativaCaminhoesGrandesNecessarios();
-            String conclusaoTexto1 = String.format(brLocale,
-                    "A simulação demonstra que o sistema de coleta de lixo de Teresina, com a configuração testada, apresentou uma eficiência de %.2f%% na coleta. ", eficienciaColeta);
-            conclusaoTexto1 += "O principal fator limitante para o transporte final ao aterro sanitário frequentemente reside no número e na gestão dos caminhões grandes disponíveis. ";
-            if (stats.getCaminhoesGrandesAdicionados() > 0) {
-                conclusaoTexto1 += String.format(brLocale, "Na simulação atual, %d caminhões grandes foram adicionados dinamicamente, indicando uma demanda que excedeu a capacidade inicial da frota de transporte.", stats.getCaminhoesGrandesAdicionados());
-            } else if (stats.getLixoTotalGerado() == 0 && stats.getLixoTotalColetado() == 0 && stats.getLixoTotalTransportado() == 0) { // Se nada aconteceu
-                conclusaoTexto1 += "A simulação não apresentou dados de coleta para avaliar a frota de caminhões grandes.";
-            }
-            else {
-                conclusaoTexto1 += "A frota inicial de caminhões grandes mostrou-se adequada durante esta simulação.";
-            }
-            if (lblConclusaoTexto1 != null) lblConclusaoTexto1.setText(conclusaoTexto1);
-
-            if (lblConclusaoCaminhoesNecessarios != null) lblConclusaoCaminhoesNecessarios.setText(String.format(brLocale, "%d Caminhões de %d Toneladas", numCGNecessarios, CaminhaoGrande.CAPACIDADE_MAXIMA_KG / 1000));
-
-            if (lblConclusaoTexto2 != null) lblConclusaoTexto2.setText(String.format(brLocale, "Esta conclusão considera a quantidade total de lixo coletado diariamente nas cinco zonas e a capacidade de transporte dos caminhões grandes. Com uma frota mínima de %d caminhões grandes, o sistema pode operar com eficiência, minimizando tempos de espera nas estações de transferência e garantindo o transporte adequado do lixo coletado.", numCGNecessarios));
-
-            // Mudar para a aba de relatório
-            if (tabPanePrincipal != null && tabRelatorioFinal != null) {
-                tabPanePrincipal.getSelectionModel().select(tabRelatorioFinal);
-            }
-        });
     }
 
     private void mostrarAlertaErro(String titulo, String cabecalho, String conteudo) {
