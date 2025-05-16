@@ -291,7 +291,7 @@ public class DistribuicaoCaminhoes implements Serializable {
                                                     Lista<ScoreZona> zonasOrdenadas) {
         int distribuidos = 0;
 
-        // Caso especial para poucos caminhões
+        // Caso especial para poucos recursos
         boolean poucosRecursos = caminhoesOciosos.tamanho() < todasZonas.tamanho();
         if (poucosRecursos) {
             // Em situação de escassez, priorizar zonas com muito lixo
@@ -313,24 +313,16 @@ public class DistribuicaoCaminhoes implements Serializable {
             caminhoes.adicionar(caminhoesOciosos.obter(i));
         }
 
-        // Limite proporcional de caminhões por zona para evitar concentração excessiva
-        // Aumentamos o denominador para permitir mais caminhões por zona quando temos poucos
-        int maxProporcional = Math.max(3, caminhoes.tamanho() / Math.max(1, (todasZonas.tamanho() - 2)));
+        // MODIFICAÇÃO: Primeira fase - distribuir caminhões iniciais com base nos scores
+        // Limitamos a quantidade na primeira distribuição para permitir uma reserva para a segunda fase
+        int caminhoesPrimeiraCota = Math.min(caminhoes.tamanho(), todasZonas.tamanho() * 3);
+        int caminhoesPorZonaBasico = Math.max(1, caminhoesPrimeiraCota / todasZonas.tamanho());
 
-        // Primeira iteração: distribuir caminhões com base na proximidade e score
-        for (int z = 0; z < zonasOrdenadas.tamanho(); z++) {
+        for (int z = 0; z < zonasOrdenadas.tamanho() && !caminhoes.estaVazia(); z++) {
             ScoreZona scoreZona = zonasOrdenadas.obter(z);
-
-            // Pula zonas que já têm caminhões suficientes
-            if (scoreZona.getCaminhoesAtivos() >= maxProporcional) {
-                continue;
-            }
-
-            // Quantos caminhões podemos ainda enviar para esta zona
-            int disponivelParaZona = maxProporcional - scoreZona.getCaminhoesAtivos();
             ZonaUrbana zona = scoreZona.getZona();
 
-            for (int i = 0; i < disponivelParaZona && !caminhoes.estaVazia(); i++) {
+            for (int i = 0; i < caminhoesPorZonaBasico && !caminhoes.estaVazia(); i++) {
                 // Encontra o caminhão mais próximo ou o melhor candidato
                 CaminhaoPequeno melhorCaminhao = encontrarCaminhaoMaisProximo(caminhoes, zona);
 
@@ -357,42 +349,39 @@ public class DistribuicaoCaminhoes implements Serializable {
             }
         }
 
-        // Segunda iteração: distribuir caminhões restantes proporcionalmente
+        // MODIFICAÇÃO: Segunda fase - distribuir TODOS os caminhões restantes de forma circular
+        // Isso garante que TODOS os caminhões sejam utilizados
         if (!caminhoes.estaVazia()) {
-            // Recalcula os scores para esta iteração
-            calcularScoresComReequilibrio();
+            int indiceZona = 0;
 
-            // Reordenar a lista
-            ordenarZonasPorScore(zonasOrdenadas);
+            System.out.println("INFO: Distribuindo " + caminhoes.tamanho() +
+                    " caminhões restantes de forma circular entre as zonas.");
 
-            double totalScores = 0;
-            for (int i = 0; i < zonasOrdenadas.tamanho(); i++) {
-                ScoreZona score = zonasOrdenadas.obter(i);
-                totalScores += Math.max(0.1, score.getScore());
-            }
+            while (!caminhoes.estaVazia()) {
+                ZonaUrbana zona = todasZonas.obter(indiceZona);
+                CaminhaoPequeno caminhao = caminhoes.obter(0);
+                caminhoes.remover(0);
 
-            for (int i = 0; i < zonasOrdenadas.tamanho(); i++) {
-                ScoreZona scoreZona = zonasOrdenadas.obter(i);
-                double proporcao = Math.max(0.1, scoreZona.getScore()) / totalScores;
-                int caminhoesProporcional = (int)Math.ceil(proporcao * caminhoes.tamanho());
-                ZonaUrbana zona = scoreZona.getZona();
-
-                for (int j = 0; j < caminhoesProporcional && !caminhoes.estaVazia(); j++) {
-                    CaminhaoPequeno caminhao = caminhoes.obter(0);
-                    caminhoes.remover(0);
-
-                    // Também remover de caminhoesOciosos
-                    for (int k = 0; k < caminhoesOciosos.tamanho(); k++) {
-                        if (caminhoesOciosos.obter(k).getPlaca().equals(caminhao.getPlaca())) {
-                            caminhoesOciosos.remover(k);
-                            break;
-                        }
+                for (int j = 0; j < caminhoesOciosos.tamanho(); j++) {
+                    if (caminhoesOciosos.obter(j).getPlaca().equals(caminhao.getPlaca())) {
+                        caminhoesOciosos.remover(j);
+                        break;
                     }
-
-                    enviarCaminhaoParaZona(caminhao, zona);
-                    distribuidos++;
-                    scoreZona.incrementarCaminhoesAtivos();
                 }
+
+                enviarCaminhaoParaZona(caminhao, zona);
+                distribuidos++;
+
+                // Atualiza o score da zona para manter o registro consistente
+                for (int i = 0; i < zonasOrdenadas.tamanho(); i++) {
+                    if (zonasOrdenadas.obter(i).getZona().getNome().equals(zona.getNome())) {
+                        zonasOrdenadas.obter(i).incrementarCaminhoesAtivos();
+                        break;
+                    }
+                }
+
+                // Avança para a próxima zona (distribuição circular)
+                indiceZona = (indiceZona + 1) % todasZonas.tamanho();
             }
         }
 

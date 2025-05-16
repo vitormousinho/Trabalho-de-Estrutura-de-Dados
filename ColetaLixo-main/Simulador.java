@@ -37,7 +37,8 @@ public class Simulador implements Serializable {
     private transient Timer timer; // transient para não ser serializado
     private int tempoSimulado = 0; // Acumula minutos totais da simulação
     private boolean pausado = false;
-    private transient Random random; // transient
+    private transient Random random;
+    private boolean proximaEstacaoEhA = true; // Para alternância entre estações
     private Estatisticas estatisticas = new Estatisticas(); // Deve ser serializável
 
     // Atributos para o sistema de distribuição
@@ -583,31 +584,30 @@ public class Simulador implements Serializable {
             }
 
             EstacaoTransferencia melhorEstacao = null;
-            int menorFila = Integer.MAX_VALUE;
-            // Lógica simples para escolher estação (poderia ser mais complexa, ex: distância)
-            if (listaEstacoes != null) {
-                for (int j = 0; j < listaEstacoes.tamanho(); j++) {
-                    EstacaoTransferencia est = listaEstacoes.obter(j);
-                    if (est instanceof EstacaoPadrao) { // Garante que é uma EstacaoPadrao para pegar a fila
-                        int tamanhoFila = ((EstacaoPadrao) est).getCaminhoesNaFila();
-                        if (tamanhoFila < menorFila) {
-                            menorFila = tamanhoFila;
-                            melhorEstacao = est;
-                        }
-                    }
-                }
+
+            // MODIFICAÇÃO: Sistema round-robin entre as estações
+            if (listaEstacoes.tamanho() >= 2) {
+                // Temos pelo menos duas estações, vamos alternar entre elas
+                int indiceEstacao = proximaEstacaoEhA ? 0 : 1;
+                melhorEstacao = listaEstacoes.obter(indiceEstacao);
+                proximaEstacaoEhA = !proximaEstacaoEhA; // Inverte para a próxima vez
+            } else {
+                // Se só tiver uma estação, usa ela
+                melhorEstacao = listaEstacoes.obter(0);
             }
 
-            if (melhorEstacao == null) { // Se não encontrou nenhuma EstacaoPadrao
-                System.err.println("ERRO SIM: Nenhuma EstacaoPadrao disponível para CP " + caminhao.getPlaca() + " descarregar.");
+            if (melhorEstacao == null) { // Se não encontrou nenhuma estação (caso inesperado)
+                System.err.println("ERRO SIM: Nenhuma estação disponível para CP " + caminhao.getPlaca() + " descarregar.");
                 return;
             }
 
             String zonaOrigemNome = (caminhao.getZonaDeOrigemParaRetorno() != null) ? caminhao.getZonaDeOrigemParaRetorno().getNome() : "OrigemDesconhecida";
             int tempoViagemCalc = calcularTempoViagemPequeno();
+            int tamanhoFila = (melhorEstacao instanceof EstacaoPadrao) ? ((EstacaoPadrao) melhorEstacao).getCaminhoesNaFila() : 0;
+
             System.out.printf("ENVIO EST: CP %s (%dkg) de Zona %s -> Est. %s (fila: %d). Viagem: %d min.%n",
                     caminhao.getPlaca(), caminhao.getCargaAtual(), zonaOrigemNome,
-                    melhorEstacao.getNome(), menorFila, tempoViagemCalc);
+                    melhorEstacao.getNome(), tamanhoFila, tempoViagemCalc);
 
             caminhao.definirDestino(melhorEstacao); // Seta status para VIAJANDO_ESTACAO
             caminhao.definirTempoViagem(tempoViagemCalc);
