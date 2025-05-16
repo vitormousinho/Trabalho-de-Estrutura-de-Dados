@@ -637,26 +637,76 @@ public class SimuladorController {
 
     private void atualizarLabelsZonas(ZonaUrbana zonaSul, ZonaUrbana zonaNorte, ZonaUrbana zonaCentro, ZonaUrbana zonaLeste, ZonaUrbana zonaSudeste) {
         Estatisticas stats = simulador != null ? simulador.getEstatisticas() : null;
-        TriConsumerCustom<Label, Label, ZonaUrbana> atualizarZonaUI = (lblGerado, lblColetado, zona) -> {
-            if (lblGerado == null || lblColetado == null) return;
-            if (zona != null && stats != null) {
-                int gerado = stats.getLixoGeradoPorZona(zona.getNome());
-                int coletado = stats.getLixoColetadoPorZona(zona.getNome());
-                lblGerado.setText("Gerado: " + String.format(brLocale, "%,d", gerado) + " kg");
-                lblColetado.setText("Coletado: " + String.format(brLocale, "%,d", coletado) + " kg");
-            } else if (zona != null) { // Sem stats, mas com zona (simulação pode não ter rodado ainda)
-                lblGerado.setText("Gerado: " + String.format(brLocale, "%,d", zona.getLixoAcumulado()) + " kg (atual)");
-                lblColetado.setText("Coletado: -- kg");
-            } else { // Sem zona e sem stats
-                lblGerado.setText("Gerado: -- kg");
-                lblColetado.setText("Coletado: -- kg");
+
+        // Sul
+        if (lblZonaSulLixoGerado != null && lblZonaSulLixoColetado != null) {
+            if (zonaSul != null && stats != null) {
+                lblZonaSulLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", stats.getLixoGeradoPorZona(zonaSul.getNome())) + " kg");
+                lblZonaSulLixoColetado.setText("Coletado: " + String.format(brLocale, "%,d", stats.getLixoColetadoPorZona(zonaSul.getNome())) + " kg");
+            } else if (zonaSul != null) {
+                lblZonaSulLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", zonaSul.getLixoAcumulado()) + " kg");
+                lblZonaSulLixoColetado.setText("Coletado: -- kg");
+            } else {
+                lblZonaSulLixoGerado.setText("Gerado: -- kg");
+                lblZonaSulLixoColetado.setText("Coletado: -- kg");
             }
-        };
-        atualizarZonaUI.accept(lblZonaSulLixoGerado, lblZonaSulLixoColetado, zonaSul);
-        atualizarZonaUI.accept(lblZonaNorteLixoGerado, lblZonaNorteLixoColetado, zonaNorte);
-        atualizarZonaUI.accept(lblZonaCentroLixoGerado, lblZonaCentroLixoColetado, zonaCentro);
-        atualizarZonaUI.accept(lblZonaLesteLixoGerado, lblZonaLesteLixoColetado, zonaLeste);
-        atualizarZonaUI.accept(lblZonaSudesteLixoGerado, lblZonaSudesteLixoColetado, zonaSudeste);
+        }
+
+        // Norte
+        if (lblZonaNorteLixoGerado != null && lblZonaNorteLixoColetado != null) {
+            if (zonaNorte != null && stats != null) {
+                lblZonaNorteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", stats.getLixoGeradoPorZona(zonaNorte.getNome())) + " kg");
+                lblZonaNorteLixoColetado.setText("Coletado: " + String.format(brLocale, "%,d", stats.getLixoColetadoPorZona(zonaNorte.getNome())) + " kg");
+            } else if (zonaNorte != null) {
+                lblZonaNorteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", zonaNorte.getLixoAcumulado()) + " kg");
+                lblZonaNorteLixoColetado.setText("Coletado: -- kg");
+            } else {
+                lblZonaNorteLixoGerado.setText("Gerado: -- kg");
+                lblZonaNorteLixoColetado.setText("Coletado: -- kg");
+            }
+        }
+
+        // Centro
+        if (lblZonaCentroLixoGerado != null && lblZonaCentroLixoColetado != null) {
+            if (zonaCentro != null && stats != null) {
+                lblZonaCentroLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", stats.getLixoGeradoPorZona(zonaCentro.getNome())) + " kg");
+                lblZonaCentroLixoColetado.setText("Coletado: " + String.format(brLocale, "%,d", stats.getLixoColetadoPorZona(zonaCentro.getNome())) + " kg");
+            } else if (zonaCentro != null) {
+                lblZonaCentroLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", zonaCentro.getLixoAcumulado()) + " kg");
+                lblZonaCentroLixoColetado.setText("Coletado: -- kg");
+            } else {
+                lblZonaCentroLixoGerado.setText("Gerado: -- kg");
+                lblZonaCentroLixoColetado.setText("Coletado: -- kg");
+            }
+        }
+
+        // Leste
+        if (lblZonaLesteLixoGerado != null && lblZonaLesteLixoColetado != null) {
+            if (zonaLeste != null && stats != null) {
+                lblZonaLesteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", stats.getLixoGeradoPorZona(zonaLeste.getNome())) + " kg");
+                lblZonaLesteLixoColetado.setText("Coletado: " + String.format(brLocale, "%,d", stats.getLixoColetadoPorZona(zonaLeste.getNome())) + " kg");
+            } else if (zonaLeste != null) {
+                lblZonaLesteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", zonaLeste.getLixoAcumulado()) + " kg");
+                lblZonaLesteLixoColetado.setText("Coletado: -- kg");
+            } else {
+                lblZonaLesteLixoGerado.setText("Gerado: -- kg");
+                lblZonaLesteLixoColetado.setText("Coletado: -- kg");
+            }
+        }
+
+        // Sudeste
+        if (lblZonaSudesteLixoGerado != null && lblZonaSudesteLixoColetado != null) {
+            if (zonaSudeste != null && stats != null) {
+                lblZonaSudesteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", stats.getLixoGeradoPorZona(zonaSudeste.getNome())) + " kg");
+                lblZonaSudesteLixoColetado.setText("Coletado: " + String.format(brLocale, "%,d", stats.getLixoColetadoPorZona(zonaSudeste.getNome())) + " kg");
+            } else if (zonaSudeste != null) {
+                lblZonaSudesteLixoGerado.setText("Gerado: " + String.format(brLocale, "%,d", zonaSudeste.getLixoAcumulado()) + " kg");
+                lblZonaSudesteLixoColetado.setText("Coletado: -- kg");
+            } else {
+                lblZonaSudesteLixoGerado.setText("Gerado: -- kg");
+                lblZonaSudesteLixoColetado.setText("Coletado: -- kg");
+            }
+        }
     }
 
     private void atualizarLabelsMetricasGerais() {
@@ -838,6 +888,11 @@ public class SimuladorController {
      * Cria e exibe o relatório final programaticamente, sem depender do FXML.
      * Esta versão cria todos os componentes de UI via código para maior confiabilidade.
      */
+    /**
+     * Atualiza o relatório final gráfico com os dados da simulação.
+     * Este método preenche os gráficos, tabelas e textos informativos
+     * na aba de relatório final.
+     */
     private void exibirRelatorioFinalGrafico() {
         if (simulador == null || simulador.getEstatisticas() == null) {
             adicionarLog("Simulador ou estatísticas não disponíveis para gerar relatório gráfico.");
@@ -921,6 +976,20 @@ public class SimuladorController {
                 }
 
                 barChart.getData().addAll(seriesLixoGerado, seriesLixoColetado);
+
+                // ADICIONADO: Definir cores personalizadas para as séries
+                for (int i = 0; i < barChart.getData().size(); i++) {
+                    XYChart.Series<String, Number> s = barChart.getData().get(i);
+                    if (i == 0) { // Lixo Gerado - Vermelho
+                        for (XYChart.Data<String, Number> data : s.getData()) {
+                            data.getNode().setStyle("-fx-bar-fill: #e74c3c;"); // Vermelho
+                        }
+                    } else if (i == 1) { // Lixo Coletado - Azul
+                        for (XYChart.Data<String, Number> data : s.getData()) {
+                            data.getNode().setStyle("-fx-bar-fill: #3498db;"); // Azul
+                        }
+                    }
+                }
 
                 chartSection.getChildren().addAll(chartTitle, barChart);
                 mainContainer.getChildren().add(chartSection);
