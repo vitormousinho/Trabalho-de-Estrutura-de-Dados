@@ -209,10 +209,6 @@ public class EstacaoPadrao extends EstacaoTransferencia {
      */
     public Lista<CaminhaoPequeno> getFilaCaminhoesPequenosSnapshot() {
         Lista<CaminhaoPequeno> snapshot = new Lista<>();
-        // Para criar um snapshot real, precisamos iterar sobre a Fila
-        // A Fila customizada não tem um iterador padrão ou método toArray.
-        // Precisaríamos adicionar tal funcionalidade ou fazer uma remoção/adição temporária.
-        // Solução simples, mas menos eficiente para filas grandes:
         if (!filaCaminhoesPequenos.estaVazia()) {
             Fila<CaminhaoPequeno> tempFila = new Fila<>();
             while(!filaCaminhoesPequenos.estaVazia()) {

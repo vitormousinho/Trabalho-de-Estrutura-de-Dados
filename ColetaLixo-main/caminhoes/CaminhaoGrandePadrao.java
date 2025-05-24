@@ -23,7 +23,4 @@ public class CaminhaoGrandePadrao extends CaminhaoGrande {
     public CaminhaoGrandePadrao() {
         super(TOLERANCIA_ESPERA_PADRAO_MINUTOS); // Usa a constante
     }
-
-    // Herda todos os métodos de CaminhaoGrande.
-    // Poderia adicionar métodos específicos ou sobrescrever existentes se necessário.
 }

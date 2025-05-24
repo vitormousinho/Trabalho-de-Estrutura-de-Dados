@@ -51,12 +51,10 @@ public abstract class CaminhaoGrande {
 
     /**
      * Simula a partida do caminhão para o aterro e descarrega o lixo.
-     * Zera a carga atual.
-     * (Na implementação atual, apenas imprime uma mensagem).
+     * Zera a carga atual
      */
     public void descarregar() {
         System.out.println("Caminhão grande partiu para o aterro com " + cargaAtual + "kg.");
-        // Aqui poderia ser adicionada lógica para registrar estatísticas de transporte
         cargaAtual = 0;
     }
 

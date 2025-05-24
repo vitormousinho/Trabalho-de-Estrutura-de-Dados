@@ -290,7 +290,6 @@ public class Estatisticas implements Serializable {
         }
         sb.append("\n");
 
-        // ... (o restante do relatório textual pode ser adicionado aqui se desejado para logs) ...
 
         sb.append("--- Totais Gerais ---\n");
         sb.append(String.format(brLocale, "Lixo Total Gerado: %,d kg\n", getLixoTotalGerado()));

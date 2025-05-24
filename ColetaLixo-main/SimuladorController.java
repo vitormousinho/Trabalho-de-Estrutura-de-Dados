@@ -50,7 +50,6 @@ public class SimuladorController {
     private static final int MINUTOS_EM_UM_DIA = 24 * 60;
     private Locale brLocale = new Locale("pt", "BR"); // Para formatação de números
 
-    // --- IDs dos Componentes FXML da Aba Principal ---
     @FXML private Button btnIniciar;
     @FXML private Button btnPausar;
     @FXML private Button btnContinuar;

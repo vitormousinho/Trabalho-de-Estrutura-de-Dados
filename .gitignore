@@ -1,6 +1,6 @@
 # Pasta de Relatórios da Simulação
 Relatorios/
-
+out/
 # Arquivos de compilação Java
 *.class
 

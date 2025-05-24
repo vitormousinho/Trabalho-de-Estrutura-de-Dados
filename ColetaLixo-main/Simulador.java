@@ -358,7 +358,6 @@ public class Simulador implements Serializable {
             }
             distribuidos = garagemCentral.distribuirCaminhoesParaZonas(listaZonas, distribuicaoCaminhoes);
         }
-        // Caso contrário, usa o código antigo (distribuidor direto ou aleatório)
         else if (distribuicaoCaminhoes != null) {
             distribuidos = distribuicaoCaminhoes.distribuirCaminhoes(todosOsCaminhoesPequenos, listaZonas);
         } else { // Fallback para distribuição aleatória se tudo mais falhar
@@ -585,7 +584,6 @@ public class Simulador implements Serializable {
 
             EstacaoTransferencia melhorEstacao = null;
 
-            // MODIFICAÇÃO: Sistema round-robin entre as estações
             if (listaEstacoes.tamanho() >= 2) {
                 // Temos pelo menos duas estações, vamos alternar entre elas
                 int indiceEstacao = proximaEstacaoEhA ? 0 : 1;
@@ -673,9 +671,6 @@ public class Simulador implements Serializable {
                     if (caminhaoProcessado.getStatus() == StatusCaminhao.INATIVO_LIMITE_VIAGENS) {
                         System.out.println("INFO SIM: CP " + caminhaoProcessado.getPlaca() + " descarregou, mas já está INATIVO_LIMITE_VIAGENS.");
                         if (usarGaragemCentral && garagemCentral != null && zonaDeRetornoOriginal != null) {
-                            // Idealmente, o caminhão inativo deveria ir para a garagem, não para uma zona.
-                            // Mas a lógica atual o manda de volta para a zona de origem.
-                            // A garagem o pegará no dia seguinte quando ele se tornar OCIOSO.
                         }
                     } else if (zonaDeRetornoOriginal != null) {
                         caminhaoProcessado.setStatus(StatusCaminhao.RETORNANDO_ZONA);
@@ -692,17 +687,12 @@ public class Simulador implements Serializable {
                     }
                 }
 
-                // Gerenciar caminhão grande
                 CaminhaoGrande cgQuePartiu = estacaoPadrao.gerenciarTempoEsperaCaminhaoGrande();
                 if (cgQuePartiu != null) {
                     int cargaTransportada = cgQuePartiu.getCargaAtual(); // Pega a carga ANTES de descarregar
                     cgQuePartiu.descarregar(); // Zera a carga do caminhão grande que partiu
 
-                    // ***** ALTERAÇÃO IMPORTANTE AQUI *****
-                    // Registrar o transporte na estação de origem e a quantidade
                     estatisticas.registrarTransporteLixoCGPorEstacao(estacaoPadrao.getNome(), cargaTransportada);
-                    // Registrar a viagem do CG (apenas para contagem de viagens, o lixo já foi contabilizado acima)
-                    // Passamos cargaTransportada para que o método saiba que foi uma viagem com carga (e conte a viagem).
                     estatisticas.registrarTransporteLixo(cargaTransportada);
 
 

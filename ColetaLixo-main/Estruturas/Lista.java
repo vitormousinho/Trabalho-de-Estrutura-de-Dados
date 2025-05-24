@@ -1,6 +1,6 @@
 package Estruturas;
 
-import java.util.Arrays; // Import necessário para Arrays.copyOf
+import java.util.Arrays;
 
 /**
  * Implementação de uma lista dinâmica genérica baseada em array.

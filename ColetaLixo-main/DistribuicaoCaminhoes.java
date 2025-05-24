@@ -313,8 +313,6 @@ public class DistribuicaoCaminhoes implements Serializable {
             caminhoes.adicionar(caminhoesOciosos.obter(i));
         }
 
-        // MODIFICAÇÃO: Primeira fase - distribuir caminhões iniciais com base nos scores
-        // Limitamos a quantidade na primeira distribuição para permitir uma reserva para a segunda fase
         int caminhoesPrimeiraCota = Math.min(caminhoes.tamanho(), todasZonas.tamanho() * 3);
         int caminhoesPorZonaBasico = Math.max(1, caminhoesPrimeiraCota / todasZonas.tamanho());
 
@@ -349,8 +347,6 @@ public class DistribuicaoCaminhoes implements Serializable {
             }
         }
 
-        // MODIFICAÇÃO: Segunda fase - distribuir TODOS os caminhões restantes de forma circular
-        // Isso garante que TODOS os caminhões sejam utilizados
         if (!caminhoes.estaVazia()) {
             int indiceZona = 0;
 

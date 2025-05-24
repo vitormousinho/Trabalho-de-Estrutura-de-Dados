@@ -114,17 +114,8 @@ public class Main {
             // scanner.close();
         }
 
-        // Decidir quando fechar o scanner:
-        // Se a opção CLI não foi escolhida e a GUI está rodando, ou se a simulação direta terminou,
-        // o scanner pode não ser mais necessário.
-        // Contudo, se a InterfaceSimulador (CLI) estiver ativa, ela usa o scanner.
-        // Para simplificar, podemos deixar para o usuário fechar o programa, o que fechará o scanner.
-        // Ou, se a opção 3 (GUI) for escolhida, podemos fechar o scanner após o SwingUtilities.invokeLater.
         if (opcao == 3) {
-            // System.out.println("Fechando scanner do console, pois a GUI foi iniciada.");
-            // scanner.close(); // CUIDADO: Isso fecha System.in para toda a aplicação.
-            // Se o redirecionamento de System.out para a GUI for a única saída,
-            // e nenhum input de console for esperado, então é seguro.
+
         }
     }
 
@@ -261,22 +252,6 @@ public class Main {
         try {
             if (min == 0 && max == 0) {
                 zona.setIntervaloGeracao(1, 1); // Para evitar erro no random, mas lixo gerado será 0
-                // Sobrescrever o método gerarLixo para tratar min=0, max=0 explicitamente, ou ajustar a lógica interna
-                // Por ora, a ZonaUrbana internamente já trata random.nextInt(max - min + 1) + min
-                // Se min=1, max=1, gera 1. Se queremos 0, a zona.gerarLixo() precisaria de ajuste ou um setLixoAcumulado(0) inicial
-                // No entanto, a lógica de setIntervaloGeracao já valida minimo > 0. Vamos manter assim e o usuário deve por ex: 1 a 1.
-                // A ZonaUrbana(nome) inicializa geracaoMinima = 100, geracaoMaxima = 500
-                // E setIntervaloGeracao exige minimo > 0.
-                // Se o usuário digitar 0 e 0, ele será pego pelo loop de validação de perguntarQuantidade.
-                // Para permitir 0,0, a validação em ZonaUrbana.setIntervaloGeracao precisaria mudar.
-                // Por ora, o usuário deve inserir pelo menos 1 para min e max se quiser geração.
-                // A validação em `setIntervaloGeracao` é `minimo <= 0 || maximo <= 0`.
-                // Então, 0,0 não é permitido por padrão na ZonaUrbana.
-                // Vamos assumir que o usuário deve colocar pelo menos 1,1 para gerar consistentemente.
-                // A mensagem de aviso acima para "0-0" é mais uma intenção.
-                // A lógica de perguntarQuantidade já força >= 0.
-                // A lógica de criarZonaComIntervalo agora garante min <= max.
-                // A validação final é em zona.setIntervaloGeracao.
             }
             zona.setIntervaloGeracao(min, max);
         } catch (IllegalArgumentException e) {
